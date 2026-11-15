@@ -1,4 +1,14 @@
 <html lang="ko"><head>
+<script>
+  // Ensure fresh player starts with 0 diamonds unless saved in their own browser
+  (function() {
+    var saved = localStorage.getItem('otd_chips');
+    if (!saved) {
+      localStorage.setItem('otd_chips', '0');
+    }
+  })();
+</script>
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>원타워 디펜스 : 마스터 밸런스</title>
@@ -196,10 +206,10 @@
 
 <div id="game-container">
   <div id="top-bar">
-    <div class="badge wave-c">⚔️ WAVE <span id="ui-wave">5</span></div>
+    <div class="badge wave-c">⚔️ WAVE <span id="ui-wave">1</span></div>
     <div class="currency-group"><div id="hud-dps-meter" class="badge" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgb(250, 204, 21); color: rgb(250, 204, 21); font-size: 10px; font-weight: 900; padding: 4px 7px; border-radius: 6px;">⚡ <span id="ui-live-dps">21</span> DPS</div>
-      <div class="badge gold-c">🪙 <span id="ui-gold">48</span></div>
-      <div class="badge chip-c">💎 <span id="ui-chips">79</span></div>
+      <div class="badge gold-c">🪙 <span id="ui-gold">35</span></div>
+      <div class="badge chip-c">💎 <span id="ui-chips">0</span></div>
       <button id="btn-arsenal" class="nav-btn" style="background: linear-gradient(135deg, rgb(2, 132, 199), rgb(37, 99, 235)); color: white; font-weight: 800; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; display: none;">💎 상점</button><div id="hud-dps-badge" class="hud-badge" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(244, 63, 94, 0.4); color: rgb(244, 63, 94); padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 4px;">🔥 <span id="ui-dps">DPS 0</span></div><button class="nav-btn speed-btn" id="btn-speed" onclick="toggleSpeed(event)">⏩ 2x</button>
       <button class="nav-btn" onclick="openLeaderboard(event)">🏆</button>
       <button class="nav-btn" id="bgm-btn" onclick="toggleBGM(event)">🔊</button>
@@ -355,7 +365,7 @@
       <div class="popup-title" style="color: #10b981;">WAVE 방어 성공!</div>
       <div class="popup-desc">
         격퇴 보상: <b id="clr-gold" style="color:#facc15;">+120G</b><br>
-        연구 다이아: <b id="clr-chips" style="color:#38bdf8;">+19 💎</b>
+        연구 다이아: <b id="clr-chips" style="color:#38bdf8;">+0 💎</b>
       </div>
       <button class="ad-btn" style="background: linear-gradient(135deg, #10b981, #059669);" onclick="proceedNextWave(true)">
         📺 광고 보고 보상 2배 받기
@@ -381,7 +391,7 @@
 <div id="arsenal-modal" class="view-screen" style="position: absolute; inset: 0px; background: rgba(3, 7, 18, 0.97); display: none; flex-direction: column; z-index: 300; padding: 16px;">
       <div style="font-size:18px; font-weight:900; text-align:center; margin-bottom:12px; color:#38bdf8; display:flex; justify-content:space-between; align-items:center;">
         <span>💎 전술 무기고 (16종)</span>
-        <span style="font-size:13px; color:#facc15;">내 다이아: <span id="shop-my-chips">34</span> 💎</span>
+        <span style="font-size:13px; color:#facc15;">내 다이아: <span id="shop-my-chips">0</span> 💎</span>
       </div>
       <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-bottom:12px;">
         <button class="shop-tab-btn active" style="background: rgb(15, 23, 42); border: 1px solid rgb(30, 41, 59); color: rgb(148, 163, 184); padding: 6px 2px; font-size: 10px; font-weight: 800; border-radius: 6px; cursor: pointer;" onclick="window.switchShopTab('turrets')">🛡️ 기체</button>
@@ -465,7 +475,7 @@
       </div>
 
       <div style="font-size:11px; color:#64748b;">
-        보유 다이아: <b id="lobby-my-chips" style="color:#facc15;">77</b> 💎<br><button id="btn-lobby-ad" onclick="window.watchLobbyAd()" class="btn-ad-reward" style="margin: 8px auto 0 auto;">📺 무료 다이아 +15💎 (3/3)</button>
+        보유 다이아: <b id="lobby-my-chips" style="color:#facc15;">0</b> 💎<br><button id="btn-lobby-ad" onclick="window.watchLobbyAd()" class="btn-ad-reward" style="margin: 8px auto 0 auto;">📺 무료 다이아 +15💎 (3/3)</button>
       </div>
     </div><div id="combo-pill">🔥 5 COMBO!</div></div>
 
