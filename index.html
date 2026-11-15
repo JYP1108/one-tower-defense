@@ -1795,11 +1795,11 @@
     document.getElementById('cost-shield').innerText = '50G';
 
     document.getElementById('gameover-popup').style.display = 'none';
-    document.getElementById('class-modal').style.display = 'flex';
+    var cm2 = document.getElementById('class-modal'); if (cm2) cm2.style.display = 'flex'; else { var ml2 = document.getElementById('main-lobby-screen'); if (ml2) ml2.style.display = 'flex'; }
     gameStarted = false;
   };
 
-  document.getElementById('class-modal').style.display = 'flex';
+  var cmInit = document.getElementById('class-modal'); if (cmInit) cmInit.style.display = 'flex';
   requestAnimationFrame(loop);
 })();
 </script>
