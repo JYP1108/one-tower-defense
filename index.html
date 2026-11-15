@@ -465,7 +465,7 @@
       </div>
 
       <div style="font-size:11px; color:#64748b;">
-        보유 다이아: <b id="lobby-my-chips" style="color:#facc15;">77</b> 💎
+        보유 다이아: <b id="lobby-my-chips" style="color:#facc15;">77</b> 💎<br><button id="btn-lobby-ad" onclick="window.watchLobbyAd()" class="btn-ad-reward" style="margin: 8px auto 0 auto;">📺 무료 다이아 +15💎 (3/3)</button>
       </div>
     </div><div id="combo-pill">🔥 5 COMBO!</div></div>
 
@@ -1750,5 +1750,214 @@
 })();
 </script>
 
+
+
+<!-- ================= REWARDED AD SYSTEM (IAA MONETIZATION) ================= -->
+<style>
+  #ad-modal-overlay {
+    position: fixed; inset: 0; background: rgba(3, 7, 18, 0.95);
+    backdrop-filter: blur(8px); z-index: 99999; display: none;
+    align-items: center; justify-content: center; flex-direction: column;
+  }
+  .ad-box {
+    width: 340px; max-width: 90vw; background: #0f172a; border: 2px solid #38bdf8;
+    border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 0 35px rgba(56,189,248,0.3);
+  }
+  .ad-video-mock {
+    width: 100%; height: 160px; background: linear-gradient(135deg, #1e293b, #0f172a);
+    border-radius: 10px; border: 1px dashed #475569; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; margin: 15px 0; position: relative; overflow: hidden;
+  }
+  .ad-progress-bar {
+    position: absolute; bottom: 0; left: 0; height: 5px; background: #38bdf8; width: 0%;
+    transition: width 1s linear;
+  }
+  .btn-ad-reward {
+    background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-weight: 900;
+    font-size: 13px; border: none; border-radius: 8px; padding: 10px 18px; cursor: pointer;
+    box-shadow: 0 0 15px rgba(245,158,11,0.4); display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-ad-revive {
+    background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-weight: 900;
+    font-size: 14px; border: none; border-radius: 8px; padding: 12px 20px; cursor: pointer;
+    box-shadow: 0 0 20px rgba(16,185,129,0.5); width: 100%; margin-top: 10px;
+    animation: pulse-glow 1.5s infinite;
+  }
+  @keyframes pulse-glow {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 15px rgba(16,185,129,0.4); }
+    50% { transform: scale(1.03); box-shadow: 0 0 25px rgba(16,185,129,0.8); }
+  }
+</style>
+
+<div id="ad-modal-overlay">
+  <div class="ad-box">
+    <div style="font-size: 11px; color: #94a3b8; font-weight: 800; letter-spacing: 1px;">SPONSORED ADVERTISEMENT</div>
+    <div id="ad-title" style="font-size: 16px; font-weight: 900; color: #38bdf8; margin-top: 4px;">📺 보상형 비디오 광고</div>
+    <div class="ad-video-mock">
+      <div id="ad-brand-icon" style="font-size: 36px; animation: bounce 1s infinite;">🛸</div>
+      <div id="ad-brand-text" style="font-size: 13px; font-weight: 800; color: #f8fafc; margin-top: 6px;">하이퍼 스페이스 방어 사령부</div>
+      <div id="ad-timer-text" style="font-size: 11px; color: #facc15; font-weight: 900; margin-top: 4px;">광고 시청 중... 5초 남음</div>
+      <div class="ad-progress-bar" id="ad-progress"></div>
+    </div>
+    <div style="font-size: 11px; color: #64748b; line-height: 1.4;">
+      광고 시청이 완료되면 약속된 보상이 100% 지급됩니다.<br>
+      <span style="color:#38bdf8;">[Google AdSense / H5 Games Ads Ready]</span>
+    </div>
+    <button id="btn-ad-close" onclick="window.closeAdModal(false)" style="margin-top: 12px; background: transparent; border: 1px solid #334155; color: #64748b; font-size: 11px; border-radius: 6px; padding: 4px 10px; cursor: pointer; display: none;">건너뛰기 (보상 미지급)</button>
+  </div>
+</div>
+
+
+<script>
+  // ================= REWARDED AD CONTROLLER & ADSENSE HOOK =================
+  window.adCallback = null;
+  window.hasUsedReviveThisRun = false;
+  window.dailyAdCount = parseInt(localStorage.getItem('otd_daily_ads') || '0', 10);
+  window.MAX_DAILY_ADS = 3;
+
+  // Google AdSense for Games / H5 Ads Integration Hook
+  window.showRewardedAd = function(placement, onRewardSuccess) {
+    console.log("[Ad] Requesting Rewarded Ad for placement:", placement);
+
+    // 1. If Google AdSense H5 Games SDK is loaded:
+    if (window.adBreak && typeof window.adBreak === 'function') {
+      window.adBreak({
+        type: 'reward',
+        name: placement,
+        beforeReward: (showAdFn) => {
+          showAdFn();
+        },
+        adViewed: () => {
+          console.log("[Ad] Google Rewarded Ad completed successfully.");
+          if (onRewardSuccess) onRewardSuccess();
+        },
+        adDismissed: () => {
+          console.log("[Ad] Google Rewarded Ad dismissed without reward.");
+        }
+      });
+      return;
+    }
+
+    // 2. Interactive Rewarded Video Ad Simulator (Pre-AdSense Approval Mode)
+    window.openSimulatedAdModal(placement, onRewardSuccess);
+  };
+
+  window.openSimulatedAdModal = function(placement, onRewardSuccess) {
+    window.adCallback = onRewardSuccess;
+    var overlay = document.getElementById('ad-modal-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+
+    var timerEl = document.getElementById('ad-timer-text');
+    var progressEl = document.getElementById('ad-progress');
+    var closeBtn = document.getElementById('btn-ad-close');
+    var titleEl = document.getElementById('ad-title');
+
+    if (placement === 'revive') titleEl.innerText = '📺 부활 지원 비디오 광고';
+    else if (placement === 'triple') titleEl.innerText = '📺 보상 3배 비디오 광고';
+    else if (placement === 'lobby_dia') titleEl.innerText = '📺 다이아 무료 충전 광고';
+
+    closeBtn.style.display = 'none';
+    progressEl.style.width = '0%';
+
+    var duration = 5; // 5 seconds high-pace ad preview
+    var remaining = duration;
+    timerEl.innerText = `광고 시청 중... ${remaining}초 남음`;
+
+    if (window.adInterval) clearInterval(window.adInterval);
+    window.adInterval = setInterval(() => {
+      remaining--;
+      var pct = Math.round(((duration - remaining) / duration) * 100);
+      progressEl.style.width = pct + '%';
+
+      if (remaining > 0) {
+        timerEl.innerText = `광고 시청 중... ${remaining}초 남음`;
+      } else {
+        clearInterval(window.adInterval);
+        timerEl.innerText = '✅ 광고 시청 완료! 보상이 지급됩니다.';
+        timerEl.style.color = '#10b981';
+        setTimeout(() => {
+          window.closeAdModal(true);
+        }, 800);
+      }
+    }, 1000);
+  };
+
+  window.closeAdModal = function(success) {
+    var overlay = document.getElementById('ad-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
+    if (window.adInterval) clearInterval(window.adInterval);
+
+    if (success && window.adCallback) {
+      window.adCallback();
+      window.adCallback = null;
+    }
+  };
+
+  // Lobby Ad Watcher (+15 💎)
+  window.watchLobbyAd = function() {
+    if (window.dailyAdCount >= window.MAX_DAILY_ADS) {
+      window.addFloatingText(window.fort.x, window.fort.y - 30, '오늘 무료 충전 한도 완료 (3/3)', '#facc15');
+      return;
+    }
+
+    window.showRewardedAd('lobby_dia', () => {
+      window.dailyAdCount++;
+      localStorage.setItem('otd_daily_ads', window.dailyAdCount);
+      window.diamonds += 15;
+      localStorage.setItem('otd_diamonds', window.diamonds);
+
+      var dEl = document.getElementById('ui-diamonds');
+      if (dEl) dEl.innerText = window.diamonds;
+      window.addFloatingText(window.fort.x, window.fort.y - 30, '💎 무료 다이아 +15개 획득!', '#facc15');
+      window.renderLobbyAdButton();
+    });
+  };
+
+  window.renderLobbyAdButton = function() {
+    var btn = document.getElementById('btn-lobby-ad');
+    if (!btn) return;
+    var rem = window.MAX_DAILY_ADS - window.dailyAdCount;
+    if (rem > 0) {
+      btn.innerHTML = `📺 무료 다이아 +15💎 (${rem}/${window.MAX_DAILY_ADS})`;
+      btn.style.opacity = '1';
+    } else {
+      btn.innerHTML = `📺 오늘 충전 완료 (0/${window.MAX_DAILY_ADS})`;
+      btn.style.opacity = '0.5';
+    }
+  };
+
+  // 3x Rewards Claim
+  window.claimTripleRewards = function(baseGold, baseDia) {
+    window.showRewardedAd('triple', () => {
+      var extraGold = baseGold * 2;
+      var extraDia = baseDia * 2;
+      window.gold += extraGold;
+      window.diamonds += extraDia;
+      localStorage.setItem('otd_diamonds', window.diamonds);
+
+      var gEl = document.getElementById('ui-gold');
+      if (gEl) gEl.innerText = window.gold;
+      var dEl = document.getElementById('ui-diamonds');
+      if (dEl) dEl.innerText = window.diamonds;
+
+      window.addFloatingText(window.fort.x, window.fort.y - 40, `🎉 3배 보상 완료! +${baseGold*3}G / +${baseDia*3}💎`, '#facc15');
+      window.returnToLobby();
+    });
+  };
+
+  // Revive Trigger Hook
+  window.triggerReviveAd = function() {
+    window.showRewardedAd('revive', () => {
+      window.hasUsedReviveThisRun = true;
+      window.fort.hp = Math.round(window.fort.maxHp * 0.6); // Revive with 60% HP
+      window.battlePaused = false;
+      var alertModal = document.getElementById('revive-modal');
+      if (alertModal) alertModal.style.display = 'none';
+
+      window.addFloatingText(window.fort.x, window.fort.y - 40, '⚡ 요새 긴급 부활 완료 (HP 60%)!', '#10b981');
+    });
+  };
+</script>
 
 </body></html>
