@@ -505,6 +505,51 @@
 
   
   
+  
+  var SKIN_THEMES = {
+    skin_cyber_blue: {
+      ring: 'rgba(56, 189, 248, 0.5)',
+      body: '#0f172a',
+      border: '#0284c7',
+      core: '#38bdf8',
+      bullet: '#38bdf8'
+    },
+    skin_obsidian_gold: {
+      ring: 'rgba(250, 204, 21, 0.65)',
+      body: '#0a0a0c',
+      border: '#d97706',
+      core: '#facc15',
+      bullet: '#fbbf24'
+    },
+    skin_hyper_crimson: {
+      ring: 'rgba(239, 68, 68, 0.65)',
+      body: '#1c0a0c',
+      border: '#dc2626',
+      core: '#ef4444',
+      bullet: '#f87171'
+    },
+    skin_matrix_green: {
+      ring: 'rgba(16, 185, 129, 0.65)',
+      body: '#022c22',
+      border: '#059669',
+      core: '#10b981',
+      bullet: '#34d399'
+    }
+  };
+
+  var equippedSkin = localStorage.getItem('otd_equipped_skin') || 'skin_cyber_blue';
+
+  window.equipSkin = function(skinId) {
+    initAudio();
+    sfx('coin');
+    equippedSkin = skinId;
+    localStorage.setItem('otd_equipped_skin', skinId);
+    if (window.addFloatingText && window.fort) {
+      window.addFloatingText(window.fort.x, window.fort.y - 35, '🎨 SKIN EQUIPPED!', '#38bdf8');
+    }
+    window.renderArsenalShopItems();
+  };
+
   // ================= TACTICAL ARSENAL (16 ITEMS) SHOP SYSTEM =================
   var ARSENAL_CATALOG = {
     turrets: [
@@ -586,6 +631,15 @@
             <button style="background:linear-gradient(135deg,#0284c7,#2563eb); color:white; border:none; font-size:11px; font-weight:800; padding:6px 12px; border-radius:6px; cursor:pointer;" onclick="window.buyArsenalItem('${item.id}', ${item.price}, '${currentShopTab}')">+1 (${item.price} 💎)</button>
           </div>
         `;
+      } else if (currentShopTab === 'skins') {
+        var isEquipped = (equippedSkin === item.id);
+        if (isEquipped) {
+          actionBtn = `<span style="background:rgba(56,189,248,0.25); border:1.5px solid #38bdf8; color:#38bdf8; font-size:11px; font-weight:900; padding:5px 10px; border-radius:6px; box-shadow:0 0 10px rgba(56,189,248,0.4);">✓ EQUIPPED</span>`;
+        } else if (owned) {
+          actionBtn = `<button style="background:#1e293b; border:1px solid #64748b; color:#f8fafc; font-size:11px; font-weight:800; padding:5px 12px; border-radius:6px; cursor:pointer;" onclick="window.equipSkin('${item.id}')">EQUIP</button>`;
+        } else {
+          actionBtn = `<button style="background:linear-gradient(135deg,#0284c7,#2563eb); color:white; border:none; font-size:11px; font-weight:800; padding:6px 12px; border-radius:6px; cursor:pointer;" onclick="window.buyArsenalItem('${item.id}', ${item.price}, '${currentShopTab}')">${item.price} 💎</button>`;
+        }
       } else {
         if (owned) {
           actionBtn = `<span style="background:rgba(16,185,129,0.2); border:1px solid #10b981; color:#10b981; font-size:11px; font-weight:900; padding:5px 10px; border-radius:6px;">✓ OWNED</span>`;
@@ -1772,7 +1826,8 @@
 
     cx.save();
     cx.rotate(energyRingAngle);
-    cx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+    var theme = (typeof SKIN_THEMES !== 'undefined' && SKIN_THEMES[equippedSkin]) ? SKIN_THEMES[equippedSkin] : { ring: 'rgba(56,189,248,0.45)', body: '#1e293b', border: '#334155', core: '#38bdf8' };
+    cx.strokeStyle = theme.ring;
     cx.lineWidth = 1.5;
     cx.setLineDash([8, 12]);
     cx.beginPath();
@@ -1809,9 +1864,9 @@
       else cx.lineTo(bx, by);
     }
     cx.closePath();
-    cx.fillStyle = '#1e293b';
+    cx.fillStyle = theme.body;
     cx.fill();
-    cx.strokeStyle = '#334155';
+    cx.strokeStyle = theme.border;
     cx.lineWidth = 3;
     cx.stroke();
 
