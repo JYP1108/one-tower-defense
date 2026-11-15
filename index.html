@@ -1970,4 +1970,243 @@
   };
 </script>
 
+
+<script>
+// ================= MASTER LOBBY & SKILLS CONTROLLER =================
+(function() {
+  window.MAX_SKILL_LEVEL = 5;
+
+  // Skills Data with Cooldown Increase Model
+  window.skills = window.skills || {
+    emp: { name: 'EMP PULSE', icon: '⚡', unlocked: false, cost: 40, upCost: 50, level: 0, cd: 14, lastUsed: -999 },
+    nuke: { name: 'ORBITAL NUKE', icon: '🚀', unlocked: false, cost: 60, upCost: 75, level: 0, cd: 28, lastUsed: -999 },
+    shield: { name: 'PARRY SHIELD', icon: '🛡️', unlocked: false, cost: 50, upCost: 65, level: 0, cd: 16, lastUsed: -999 },
+    repair: { name: 'NANO REPAIR', icon: '💊', unlocked: false, cost: 45, upCost: 60, level: 0, cd: 22, lastUsed: -999 },
+    overcharge: { name: 'OVERCHARGE', icon: '🔥', unlocked: false, cost: 45, upCost: 55, level: 0, cd: 18, lastUsed: -999 }
+  };
+
+  window.startBattleFromLobby = function() {
+    var lobby = document.getElementById('main-lobby-screen');
+    if (lobby) lobby.style.display = 'none';
+    var classModal = document.getElementById('class-modal');
+    if (classModal) classModal.style.display = 'none';
+    
+    window.gameStarted = true;
+    window.battlePaused = false;
+
+    // Reset combat state
+    if (typeof window.gold !== 'undefined') window.gold = 35;
+    var gEl = document.getElementById('ui-gold');
+    if (gEl) gEl.innerText = window.gold || 35;
+
+    if (window.initWave) window.initWave(1);
+    if (window.renderSkillButtons) window.renderSkillButtons();
+    if (window.initAudio) window.initAudio();
+  };
+
+  window.returnToLobby = function() {
+    var lobby = document.getElementById('main-lobby-screen');
+    if (lobby) lobby.style.display = 'flex';
+    var gov = document.getElementById('gameover-popup');
+    if (gov) gov.style.display = 'none';
+    var clr = document.getElementById('clear-popup');
+    if (clr) clr.style.display = 'none';
+    var shop = document.getElementById('shop-screen');
+    if (shop) shop.style.display = 'none';
+
+    window.gameStarted = false;
+    window.battlePaused = true;
+    if (window.updateChipDisplays) window.updateChipDisplays();
+  };
+
+  window.openShop = function() {
+    var s = document.getElementById('shop-screen');
+    if (s) s.style.display = 'flex';
+    if (window.updateChipDisplays) window.updateChipDisplays();
+  };
+
+  window.closeShop = function() {
+    var s = document.getElementById('shop-screen');
+    if (s) s.style.display = 'none';
+  };
+
+  window.updateChipDisplays = function() {
+    var val = window.chips || parseInt(localStorage.getItem('otd_chips') || '0', 10);
+    window.chips = val;
+    window.diamonds = val;
+    ['ui-chips', 'lobby-my-chips', 'shop-my-chips', 'ui-diamonds'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.innerText = val;
+    });
+    localStorage.setItem('otd_chips', val);
+  };
+
+  window.upgradeSkill = function(type, e) {
+    if (e) e.stopPropagation();
+    var s = window.skills[type];
+    if (!s || !s.unlocked) return;
+    if (s.level >= window.MAX_SKILL_LEVEL) {
+      if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, 'MAX LEVEL (Lv.5)!', '#facc15');
+      return;
+    }
+
+    if ((window.gold || 0) >= s.upCost) {
+      window.gold -= s.upCost;
+      var gEl = document.getElementById('ui-gold');
+      if (gEl) gEl.innerText = window.gold;
+
+      s.level++;
+      s.upCost = Math.round(s.upCost * 1.55);
+
+      if (type === 'emp') s.cd = 13 + s.level * 1.0;
+      else if (type === 'nuke') s.cd = 26 + s.level * 2.0;
+      else if (type === 'shield') s.cd = 15 + s.level * 1.0;
+      else if (type === 'repair') s.cd = 20 + s.level * 2.0;
+      else if (type === 'overcharge') s.cd = 16 + s.level * 2.0;
+
+      var maxTxt = s.level >= window.MAX_SKILL_LEVEL ? ' [MAX]' : '';
+      if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, `✨ ${s.name} Lv.${s.level}${maxTxt}! (CD ${s.cd}s)`, s.level >= 5 ? '#facc15' : '#38bdf8');
+      window.renderSkillButtons();
+    } else {
+      if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, 'NOT ENOUGH GOLD!', '#ef4444');
+    }
+  };
+
+  window.handleSkillClick = function(type) {
+    var s = window.skills[type];
+    if (!s) return;
+    if (!s.unlocked) {
+      if ((window.gold || 0) >= s.cost) {
+        window.gold -= s.cost;
+        var gEl = document.getElementById('ui-gold');
+        if (gEl) gEl.innerText = window.gold;
+        s.unlocked = true;
+        s.level = 1;
+        s.upCost = s.upCost || Math.round(s.cost * 1.25);
+        if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, `🔓 ${s.name} Lv.1 UNLOCKED!`, '#38bdf8');
+        window.renderSkillButtons();
+      } else {
+        if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, 'NOT ENOUGH GOLD!', '#ef4444');
+      }
+      return;
+    }
+
+    var now = performance.now();
+    if (now - s.lastUsed < s.cd * 1000) {
+      var rem = Math.ceil((s.cd * 1000 - (now - s.lastUsed)) / 1000);
+      if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, `⏳ CD ${rem}s`, '#94a3b8');
+      return;
+    }
+
+    s.lastUsed = now;
+    if (type === 'emp') {
+      var dur = 1500 + s.level * 700;
+      if (window.enemies) window.enemies.forEach(function(en) { en.stunTime = dur; });
+      if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 40, `⚡ EMP STUN (${(dur/1000).toFixed(1)}s)!`, '#38bdf8');
+    } else if (type === 'nuke') {
+      var nukeDmg = 50 + s.level * 86;
+      if (window.enemies) {
+        window.enemies.forEach(function(en) { en.hp -= nukeDmg; });
+        window.enemies = window.enemies.filter(function(en) { return en.hp > 0; });
+      }
+      window.screenShake = 22;
+      if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 40, `🚀 ORBITAL NUKE (${nukeDmg} DMG)!`, '#f97316');
+    } else if (type === 'shield') {
+      var sTime = 1000 + s.level * 600;
+      if (window.fort) window.fort.shieldTime = sTime;
+      if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 40, `🛡️ PARRY SHIELD (${(sTime/1000).toFixed(1)}s)!`, '#22c55e');
+    } else if (type === 'repair') {
+      var rep = 10 + s.level * 22;
+      if (window.fort) window.fort.hp = Math.min(window.fort.maxHp, window.fort.hp + rep);
+      if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 40, `💊 REPAIR (+${rep} HP)!`, '#10b981');
+    } else if (type === 'overcharge') {
+      var ocTime = 3000 + s.level * 1500;
+      window.fortOverchargeUntil = now + ocTime;
+      if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 40, `🔥 OVERCHARGED (${(ocTime/1000).toFixed(1)}s)!`, '#eab308');
+    }
+    window.renderSkillButtons();
+  };
+
+  window.toggleSpeed = function() {
+    if (window.gameSpeed === 1.0) window.gameSpeed = 2.0;
+    else if (window.gameSpeed === 2.0) window.gameSpeed = 3.0;
+    else window.gameSpeed = 1.0;
+
+    var btn = document.getElementById('btn-speed') || document.querySelector('.btn-speed');
+    if (btn) {
+      if (window.gameSpeed === 3.0) {
+        btn.innerText = '⏩ 3x MAX';
+        btn.style.color = '#facc15';
+        btn.style.borderColor = '#facc15';
+      } else if (window.gameSpeed === 2.0) {
+        btn.innerText = '⏩ 2x';
+        btn.style.color = '#38bdf8';
+        btn.style.borderColor = '#38bdf8';
+      } else {
+        btn.innerText = '⏩ 1x';
+        btn.style.color = '#94a3b8';
+        btn.style.borderColor = '#334155';
+      }
+    }
+    if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, `⏩ SPEED: ${window.gameSpeed}x`, '#38bdf8');
+  };
+
+  window.renderSkillButtons = function() {
+    var types = ['emp', 'nuke', 'shield', 'repair', 'overcharge'];
+    types.forEach(function(t) {
+      var s = window.skills[t];
+      var card = document.getElementById(`skill-btn-${t}`);
+      if (!card || !s) return;
+
+      var isMax = s.level >= window.MAX_SKILL_LEVEL;
+      var lvlColor = isMax ? '#f59e0b' : (s.level >= 4 ? '#a855f7' : (s.level >= 2 ? '#38bdf8' : '#0284c7'));
+      var lvlBadge = s.unlocked ? `<span style="background:${lvlColor}; color:#fff; font-size:8px; font-weight:900; padding:1px 4px; border-radius:4px; margin-left:2px;">Lv.${s.level}${isMax?' MAX':''}</span>` : '';
+      
+      var statusText = '';
+      var cdOverlayStyle = '';
+
+      if (!s.unlocked) {
+        statusText = `<div style="font-size:8.5px; color:#facc15; font-weight:800; margin-top:2px;">UNLOCK ${s.cost}G</div>`;
+      } else {
+        var now = performance.now();
+        var elapsed = now - s.lastUsed;
+        var totalCd = s.cd * 1000;
+        if (elapsed < totalCd && s.lastUsed > 0) {
+          var rem = Math.ceil((totalCd - elapsed) / 1000);
+          var pct = Math.min(100, Math.round(((totalCd - elapsed) / totalCd) * 100));
+          statusText = `<div style="font-size:8.5px; color:#ef4444; font-weight:800; margin-top:2px;">⏳ ${rem}s</div>`;
+          cdOverlayStyle = `background: conic-gradient(rgba(3,7,18,0.78) ${pct}%, transparent ${pct}%);`;
+        } else {
+          statusText = `<div style="font-size:8.5px; color:#38bdf8; font-weight:800; margin-top:2px;">READY</div>`;
+        }
+      }
+
+      var upBtnHtml = '';
+      if (s.unlocked && !isMax) {
+        upBtnHtml = `<div onclick="window.upgradeSkill('${t}', event)" style="margin-top:3px; background:rgba(250,204,21,0.18); border:1px solid #facc15; color:#facc15; font-size:8px; font-weight:900; border-radius:4px; padding:2px 2px; cursor:pointer;">▲Lv.${s.level+1} ${s.upCost}G</div>`;
+      } else if (s.unlocked && isMax) {
+        upBtnHtml = `<div style="margin-top:3px; font-size:8px; font-weight:900; color:#f59e0b; background:rgba(245,158,11,0.18); border:1px solid #f59e0b; border-radius:4px; padding:2px 2px;">👑 MAX</div>`;
+      }
+
+      card.style.position = 'relative';
+      card.style.overflow = 'hidden';
+
+      card.innerHTML = `
+        <div style="position:absolute; inset:0; ${cdOverlayStyle} pointer-events:none; border-radius:8px;"></div>
+        <div style="font-size:14px; position:relative; z-index:2;">${s.icon}</div>
+        <div style="font-weight:900; font-size:9px; margin-top:1px; display:flex; align-items:center; justify-content:center; position:relative; z-index:2;">${s.name} ${lvlBadge}</div>
+        <div style="position:relative; z-index:2;">${statusText}</div>
+        <div style="position:relative; z-index:2;">${upBtnHtml}</div>
+      `;
+    });
+  };
+
+  // Initialize
+  window.addEventListener('DOMContentLoaded', function() {
+    if (window.updateChipDisplays) window.updateChipDisplays();
+    if (window.renderSkillButtons) window.renderSkillButtons();
+  });
+})();
+</script>
+
 </body></html>
