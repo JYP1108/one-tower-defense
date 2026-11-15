@@ -1,5 +1,27 @@
 <html lang="en"><head>
 <script>
+
+  // URL Auto-Reset handler (e.g. ?reset=1)
+  if (window.location.search && (window.location.search.includes('reset') || window.location.search.includes('clear'))) {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch(e) {}
+  }
+
+  window.resetAllGameData = function() {
+    if (confirm('Are you sure you want to reset all game data (Diamonds, Gold, Upgrades, Inventory) to clean initial state?')) {
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch(e) {}
+      window.location.reload();
+    }
+  };
+
   // Ensure fresh player starts with 0 diamonds unless saved in their own browser
   (function() {
     var saved = localStorage.getItem('otd_chips');
@@ -476,6 +498,10 @@
         <button style="background:#0f172a; border:1px solid #334155; color:#94a3b8; padding:12px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="window.openLeaderboard()">
           🏆 HALL OF FAME (RANKINGS)
         </button>
+
+        <button style="background:rgba(239,68,68,0.1); border:1px dashed #ef4444; color:#f87171; padding:9px; border-radius:10px; font-size:11px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:2px;" onclick="window.resetAllGameData()">
+          🔄 RESET GAME PROGRESS (0 💎 / Lv.1)
+        </button>
       </div>
 
       <div style="font-size:11px; color:#64748b;">
@@ -484,6 +510,28 @@
     </div><div id="combo-pill">🔥 5 COMBO!</div></div>
 
 <script>
+
+  // URL Auto-Reset handler (e.g. ?reset=1)
+  if (window.location.search && (window.location.search.includes('reset') || window.location.search.includes('clear'))) {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch(e) {}
+  }
+
+  window.resetAllGameData = function() {
+    if (confirm('Are you sure you want to reset all game data (Diamonds, Gold, Upgrades, Inventory) to clean initial state?')) {
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch(e) {}
+      window.location.reload();
+    }
+  };
+
 (function() {
   var cvs = document.getElementById('canvas');
   var cx = cvs.getContext('2d');
@@ -2218,6 +2266,28 @@
 
 
 <script>
+
+  // URL Auto-Reset handler (e.g. ?reset=1)
+  if (window.location.search && (window.location.search.includes('reset') || window.location.search.includes('clear'))) {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch(e) {}
+  }
+
+  window.resetAllGameData = function() {
+    if (confirm('Are you sure you want to reset all game data (Diamonds, Gold, Upgrades, Inventory) to clean initial state?')) {
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch(e) {}
+      window.location.reload();
+    }
+  };
+
   // ================= REWARDED AD CONTROLLER & ADSENSE HOOK =================
   window.adCallback = null;
   window.hasUsedReviveThisRun = false;
@@ -2367,6 +2437,28 @@
 
 
 <script>
+
+  // URL Auto-Reset handler (e.g. ?reset=1)
+  if (window.location.search && (window.location.search.includes('reset') || window.location.search.includes('clear'))) {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch(e) {}
+  }
+
+  window.resetAllGameData = function() {
+    if (confirm('Are you sure you want to reset all game data (Diamonds, Gold, Upgrades, Inventory) to clean initial state?')) {
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch(e) {}
+      window.location.reload();
+    }
+  };
+
 // ================= MASTER LOBBY & SKILLS CONTROLLER =================
 (function() {
   window.MAX_SKILL_LEVEL = 5;
