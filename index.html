@@ -326,8 +326,8 @@
 
   <!-- ROGUELIKE 3-CHOICE PERK MODAL -->
   <div id="perk-modal" style="display: none;">
-    <div class="perk-title">전술 특성 선택</div>
-    <div class="perk-sub">웨이브 돌파 보너스! 특성 1개를 선택하세요.</div>
+    <div class="perk-title">TACTICAL PERK SELECTION</div>
+    <div class="perk-sub">Wave Clear Bonus! Choose 1 tactical perk to empower your tower.</div>
     <div class="perk-cards-wrap" id="perk-cards-container"><div class="perk-card">
         <div class="perk-header">
           <span class="perk-name">관통 레이저</span>
@@ -706,16 +706,17 @@
   var lastSpawnTime = 0;
 
   var perkPool = [
-    { id: 'pierce', name: '관통 레이저', tag: '공격', desc: '탄환이 적을 1마리 관통합니다 (관통 시 대미지 65% 감쇄).' },
-    { id: 'multishot', name: '멀티 배럴', tag: '특수', desc: '전방으로 탄환 2발을 동시 분할 발사합니다 (발당 70% 대미지).' },
-    { id: 'burn', name: '플라즈마 화염', tag: '원소', desc: '피격된 적에게 3s간 s당 도트 화염 대미지를 입힙니다.' },
-    { id: 'freeze', name: '극저온 동결', tag: '제어', desc: '피격된 적의 이동 속도를 25% 둔화시킵니다.' },
-    { id: 'lifesteal', name: '흡혈 나노봇', tag: '생존', desc: '적 처치 시 타워 체력을 +2씩 즉시 회복합니다.' },
-    { id: 'gold', name: '연금술 코어', tag: '재화', desc: '몬스터 처치 시 획득하는 골드가 +1G 추가 지급됩니다.' }
+    { id: 'pierce', name: 'Piercing Laser', tag: 'OFFENSE', desc: 'Bullets pierce 1 additional enemy (65% damage on pierce).' },
+    { id: 'multishot', name: 'Dual Barrel', tag: 'SPECIAL', desc: 'Fires 2 simultaneous split bullets (70% damage each).' },
+    { id: 'burn', name: 'Plasma Burn', tag: 'ELEMENTAL', desc: 'Ignites enemies dealing burn damage over 3 seconds.' },
+    { id: 'freeze', name: 'Cryo Freeze', tag: 'CONTROL', desc: 'Slows down enemy movement speed by 25% on hit.' },
+    { id: 'lifesteal', name: 'Vampiric Bots', tag: 'SURVIVAL', desc: 'Restores +2 Fortress HP immediately upon slaying an enemy.' },
+    { id: 'gold', name: 'Bounty Siphon', tag: 'ECONOMY', desc: 'Earn +1 extra Gold bonus for every enemy defeated.' }
   ];
 
   window.openPerkChoice = function() {
     battlePaused = true;
+    window.battlePaused = true;
     var container = document.getElementById('perk-cards-container');
     container.innerHTML = '';
     var shuffled = perkPool.slice().sort(function() { return 0.5 - Math.random(); });
