@@ -226,6 +226,9 @@
     <div id="boss-hp-bg"><div id="boss-hp-fill" style="width: 0%;"></div></div>
   </div>
 
+    <!-- In-Game Item Quickslots Floating on Right Side of Battlefield -->
+  <div id="item-quickslot-panel" style="position: absolute; right: 8px; top: 72px; display: flex; flex-direction: column; gap: 6px; z-index: 100; pointer-events: auto;"></div>
+
   <canvas id="canvas" style="flex: 1; min-height: 0; width: 100%;"></canvas>
 
   <!-- Tactical Skill Bar -->
@@ -645,7 +648,7 @@
       sfx('laser');
       if (window.skills) {
         Object.keys(window.skills).forEach(k => { window.skills[k].lastUsed = 0; });
-        if (window.renderSkillButtons) window.renderSkillButtons(); window.renderItemQuickslots();
+        if (window.renderSkillButtons) window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
       }
       if (window.addFloatingText && window.fort) {
         window.addFloatingText(window.fort.x, window.fort.y - 45, '🔋 OVERDRIVE: SKILLS READY!', '#38bdf8');
@@ -1069,7 +1072,7 @@
 
     updateStatUI();
     initWave(1);
-    if (window.renderSkillButtons) window.renderSkillButtons(); window.renderItemQuickslots();
+    if (window.renderSkillButtons) window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
   };
 
   window.startBattleFromLobby = function() {
@@ -2383,7 +2386,7 @@
 
       var maxTxt = s.level >= window.MAX_SKILL_LEVEL ? ' [MAX]' : '';
       if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, `✨ ${s.name} Lv.${s.level}${maxTxt}! (CD ${s.cd}s)`, s.level >= 5 ? '#facc15' : '#38bdf8');
-      window.renderSkillButtons(); window.renderItemQuickslots();
+      window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
     } else {
       if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, 'NOT ENOUGH GOLD!', '#ef4444');
     }
@@ -2398,7 +2401,7 @@
         s.level = 1;
         s.upCost = s.upCost || Math.round(s.cost * 1.25);
         if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, `🔓 ${s.name} Lv.1 UNLOCKED!`, '#38bdf8');
-        window.renderSkillButtons(); window.renderItemQuickslots();
+        window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
       } else {
         if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, 'NOT ENOUGH GOLD!', '#ef4444');
       }
@@ -2438,7 +2441,7 @@
       window.fortOverchargeUntil = now + ocTime;
       if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 40, `🔥 OVERCHARGED (${(ocTime/1000).toFixed(1)}s)!`, '#eab308');
     }
-    window.renderSkillButtons(); window.renderItemQuickslots();
+    window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
   };
 
   window.toggleSpeed = function() {
@@ -2518,7 +2521,7 @@
   // Initialize
   window.addEventListener('DOMContentLoaded', function() {
     if (window.updateChipDisplays) window.updateChipDisplays();
-    if (window.renderSkillButtons) window.renderSkillButtons(); window.renderItemQuickslots();
+    if (window.renderSkillButtons) window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
   });
 })();
 </script>
