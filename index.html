@@ -217,7 +217,7 @@
   </div>
 
   <div id="danger-vignette" style="display: none;"></div>
-  <div id="target-mode-pill" onclick="cycleTargetMode()">🩸 체력 낮은 적 우선</div>
+  <div id="target-mode-pill" onclick="cycleTargetMode()">🩸 LOWEST HP FIRST</div>
   <div id="audio-prompt" onclick="enableAudioDirect()" style="display: none;">🔊 소리가 안 나면 여기를 터치해 사운드를 켜세요!</div>
   <div id="boss-warning" style="display: none;">🚨 BOSS INCOMING 🚨</div>
 
@@ -624,7 +624,7 @@
 
   // Targeting Priority Modes
   var targetModes = ['closest', 'fastest', 'lowest_hp', 'boss_first'];
-  var targetModeLabels = ['🎯 최근접 적', '⚡ 고속 자폭병 우선', '🩸 체력 낮은 적 우선', '👑 보스/탱커 우선'];
+  var targetModeLabels = ['🎯 최근접 적', '⚡ 고속 자폭병 우선', '🩸 LOWEST HP FIRST', '👑 보스/탱커 우선'];
   var targetModeIdx = 0;
 
   window.cycleTargetMode = function() {
