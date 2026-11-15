@@ -561,10 +561,13 @@
 
     var items = ARSENAL_CATALOG[currentShopTab] || [];
     items.forEach(item => {
+      var isConsumable = currentShopTab === 'items';
+      var count = parseInt(localStorage.getItem('otd_item_count_' + item.id) || '0');
       var owned = localStorage.getItem('otd_owned_' + item.id) === 'true';
+
       var card = document.createElement('div');
       card.style.background = 'rgb(15, 23, 42)';
-      card.style.border = owned ? '1px solid #10b981' : '1px solid rgb(30, 41, 59)';
+      card.style.border = (owned || count > 0) ? '1px solid #10b981' : '1px solid rgb(30, 41, 59)';
       card.style.borderRadius = '10px';
       card.style.padding = '10px 12px';
       card.style.display = 'flex';
@@ -573,10 +576,19 @@
       card.style.marginBottom = '6px';
 
       var actionBtn = '';
-      if (owned) {
-        actionBtn = `<span style="background:rgba(16,185,129,0.2); border:1px solid #10b981; color:#10b981; font-size:11px; font-weight:900; padding:5px 10px; border-radius:6px;">✓ OWNED</span>`;
+      if (isConsumable) {
+        actionBtn = `
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+            ${count > 0 ? `<span style="font-size:9.5px; font-weight:900; color:#10b981;">x${count} READY</span>` : ''}
+            <button style="background:linear-gradient(135deg,#0284c7,#2563eb); color:white; border:none; font-size:11px; font-weight:800; padding:6px 12px; border-radius:6px; cursor:pointer;" onclick="window.buyArsenalItem('${item.id}', ${item.price}, '${currentShopTab}')">+1 (${item.price} 💎)</button>
+          </div>
+        `;
       } else {
-        actionBtn = `<button style="background:linear-gradient(135deg,#0284c7,#2563eb); color:white; border:none; font-size:11px; font-weight:800; padding:6px 12px; border-radius:6px; cursor:pointer;" onclick="window.buyArsenalItem('${item.id}', ${item.price}, '${currentShopTab}')">${item.price} 💎</button>`;
+        if (owned) {
+          actionBtn = `<span style="background:rgba(16,185,129,0.2); border:1px solid #10b981; color:#10b981; font-size:11px; font-weight:900; padding:5px 10px; border-radius:6px;">✓ OWNED</span>`;
+        } else {
+          actionBtn = `<button style="background:linear-gradient(135deg,#0284c7,#2563eb); color:white; border:none; font-size:11px; font-weight:800; padding:6px 12px; border-radius:6px; cursor:pointer;" onclick="window.buyArsenalItem('${item.id}', ${item.price}, '${currentShopTab}')">${item.price} 💎</button>`;
+        }
       }
 
       card.innerHTML = `
@@ -589,7 +601,6 @@
       container.appendChild(card);
     });
 
-    // Update diamonds in shop header
     var chipsEl = document.getElementById('shop-my-chips');
     if (chipsEl) chipsEl.innerText = window.getChips ? window.getChips() : (window.chips || 0);
   };
@@ -599,17 +610,110 @@
     var curChips = window.getChips ? window.getChips() : (window.chips || 0);
     if (curChips >= price) {
       window.addChips(-price);
-      localStorage.setItem('otd_owned_' + id, 'true');
       sfx('coin');
-      if (window.addFloatingText && window.fort) {
-        window.addFloatingText(window.fort.x, window.fort.y - 35, '✨ ITEM UNLOCKED!', '#10b981');
+
+      if (tab === 'items') {
+        var currentCount = parseInt(localStorage.getItem('otd_item_count_' + id) || '0');
+        localStorage.setItem('otd_item_count_' + id, currentCount + 1);
+        if (window.addFloatingText && window.fort) {
+          window.addFloatingText(window.fort.x, window.fort.y - 35, '🎒 ITEM ACQUIRED (x' + (currentCount + 1) + ')!', '#10b981');
+        }
+      } else {
+        localStorage.setItem('otd_owned_' + id, 'true');
+        if (window.addFloatingText && window.fort) {
+          window.addFloatingText(window.fort.x, window.fort.y - 35, '✨ ITEM UNLOCKED!', '#10b981');
+        }
       }
+
       window.renderArsenalShopItems();
+      window.renderItemQuickslots();
     } else {
       sfx('hit');
       if (window.addFloatingText && window.fort) {
         window.addFloatingText(window.fort.x, window.fort.y - 35, '❌ NEED MORE DIAMONDS!', '#ef4444');
       }
+    }
+  };
+
+  window.useBattleItem = function(id) {
+    var count = parseInt(localStorage.getItem('otd_item_count_' + id) || '0');
+    if (count <= 0) return;
+    initAudio();
+    localStorage.setItem('otd_item_count_' + id, count - 1);
+
+    if (id === 'item_overdrive') {
+      sfx('laser');
+      if (window.skills) {
+        Object.keys(window.skills).forEach(k => { window.skills[k].lastUsed = 0; });
+        if (window.renderSkillButtons) window.renderSkillButtons(); window.renderItemQuickslots();
+      }
+      if (window.addFloatingText && window.fort) {
+        window.addFloatingText(window.fort.x, window.fort.y - 45, '🔋 OVERDRIVE: SKILLS READY!', '#38bdf8');
+      }
+    } else if (id === 'item_armor') {
+      sfx('coin');
+      if (window.fort) {
+        window.fort.hp = Math.min(window.fort.maxHp, window.fort.hp + 150);
+        if (window.addFloatingText) {
+          window.addFloatingText(window.fort.x, window.fort.y - 45, '🛡️ REPAIRED +150 HP!', '#10b981');
+        }
+      }
+    } else if (id === 'item_capacitor') {
+      sfx('hit');
+      if (window.enemies) {
+        window.enemies.forEach(e => { e.stunTime = 4500; e.hp -= 80; });
+      }
+      if (window.addFloatingText && window.fort) {
+        window.addFloatingText(window.fort.x, window.fort.y - 45, '⚡ EMP MEGA DISCHARGE!', '#facc15');
+      }
+    } else if (id === 'item_siphon') {
+      sfx('coin');
+      if (window.addGold) window.addGold(150);
+      if (window.addFloatingText && window.fort) {
+        window.addFloatingText(window.fort.x, window.fort.y - 45, '💰 GOLD SIPHON +150G!', '#f59e0b');
+      }
+    }
+
+    window.renderItemQuickslots();
+  };
+
+  window.renderItemQuickslots = function() {
+    var panel = document.getElementById('item-quickslot-panel');
+    if (!panel) return;
+    panel.innerHTML = '';
+
+    var items = [
+      { id: 'item_overdrive', name: 'OVERDRIVE', icon: '🔋', color: '#38bdf8' },
+      { id: 'item_armor', name: 'NANO ARMOR', icon: '🛡️', color: '#10b981' },
+      { id: 'item_capacitor', name: 'MEGA EMP', icon: '⚡', color: '#facc15' },
+      { id: 'item_siphon', name: 'GOLD SIPHON', icon: '💰', color: '#f59e0b' }
+    ];
+
+    var totalOwned = 0;
+    items.forEach(it => {
+      var count = parseInt(localStorage.getItem('otd_item_count_' + it.id) || '0');
+      if (count > 0) {
+        totalOwned++;
+        var btn = document.createElement('button');
+        btn.style.cssText = `background: rgba(15, 23, 42, 0.92); border: 1.5px solid ${it.color}; box-shadow: 0 0 10px ${it.color}66; border-radius: 8px; padding: 5px 8px; display: flex; align-items: center; gap: 6px; cursor: pointer; color: #fff;`;
+        btn.onclick = function() { window.useBattleItem(it.id); };
+        btn.innerHTML = `
+          <span style="font-size: 15px;">${it.icon}</span>
+          <div style="display: flex; flex-direction: column; align-items: flex-start; text-align: left;">
+            <span style="font-size: 8.5px; font-weight: 900; color: ${it.color};">${it.name}</span>
+            <span style="font-size: 8px; font-weight: 800; color: #facc15;">x${count} USE</span>
+          </div>
+        `;
+        panel.appendChild(btn);
+      }
+    });
+
+    if (totalOwned === 0) {
+      var shopBtn = document.createElement('button');
+      shopBtn.style.cssText = 'background: rgba(15, 23, 42, 0.7); border: 1px dashed #64748b; border-radius: 8px; padding: 4px 6px; display: flex; align-items: center; gap: 4px; cursor: pointer; color: #94a3b8; font-size: 8.5px; font-weight: 800;';
+      shopBtn.onclick = function() { window.openArsenalShop(); };
+      shopBtn.innerHTML = '<span>🎒</span> <span>+ITEM</span>';
+      panel.appendChild(shopBtn);
     }
   };
 
@@ -965,7 +1069,7 @@
 
     updateStatUI();
     initWave(1);
-    if (window.renderSkillButtons) window.renderSkillButtons();
+    if (window.renderSkillButtons) window.renderSkillButtons(); window.renderItemQuickslots();
   };
 
   window.startBattleFromLobby = function() {
@@ -2279,7 +2383,7 @@
 
       var maxTxt = s.level >= window.MAX_SKILL_LEVEL ? ' [MAX]' : '';
       if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, `✨ ${s.name} Lv.${s.level}${maxTxt}! (CD ${s.cd}s)`, s.level >= 5 ? '#facc15' : '#38bdf8');
-      window.renderSkillButtons();
+      window.renderSkillButtons(); window.renderItemQuickslots();
     } else {
       if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, 'NOT ENOUGH GOLD!', '#ef4444');
     }
@@ -2294,7 +2398,7 @@
         s.level = 1;
         s.upCost = s.upCost || Math.round(s.cost * 1.25);
         if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, `🔓 ${s.name} Lv.1 UNLOCKED!`, '#38bdf8');
-        window.renderSkillButtons();
+        window.renderSkillButtons(); window.renderItemQuickslots();
       } else {
         if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, 'NOT ENOUGH GOLD!', '#ef4444');
       }
@@ -2334,7 +2438,7 @@
       window.fortOverchargeUntil = now + ocTime;
       if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 40, `🔥 OVERCHARGED (${(ocTime/1000).toFixed(1)}s)!`, '#eab308');
     }
-    window.renderSkillButtons();
+    window.renderSkillButtons(); window.renderItemQuickslots();
   };
 
   window.toggleSpeed = function() {
@@ -2414,7 +2518,7 @@
   // Initialize
   window.addEventListener('DOMContentLoaded', function() {
     if (window.updateChipDisplays) window.updateChipDisplays();
-    if (window.renderSkillButtons) window.renderSkillButtons();
+    if (window.renderSkillButtons) window.renderSkillButtons(); window.renderItemQuickslots();
   });
 })();
 </script>
