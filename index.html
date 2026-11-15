@@ -15,7 +15,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body { background: #02040a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
-    #game-container { position: relative; width: 100%; max-width: 440px; height: 100vh; max-height: 780px; background: #020617; border: 2px solid #1e293b; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.95); }
+    #game-container { position: relative; width: 100%; max-width: 480px; height: 100vh; max-height: 860px; background: #020617; border: 2px solid #1e293b; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.95); }
     
     /* Top Bar */
     #top-bar { padding: 10px 14px; background: #090e1a; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; z-index: 10; }
@@ -232,7 +232,7 @@
   
 
   <!-- Bottom Upgrades -->
-  <div id="bottom-panel" style="display: flex; flex-direction: column; padding: 4px 8px 6px; background: rgb(9, 13, 22); border-top: 1px solid rgb(30, 41, 59); box-shadow: rgba(0, 0, 0, 0.6) 0px -8px 24px; flex-shrink: 0; gap: 4px;">
+  <div id="bottom-panel" style="display: flex; flex-direction: column; padding: 2px 6px 4px; background: rgb(9, 13, 22); border-top: 1px solid rgb(30, 41, 59); box-shadow: rgba(0, 0, 0, 0.6) 0px -8px 24px; flex-shrink: 0; gap: 4px;">
       <!-- Top Row: 5 Skills with Level-up Buttons -->
       <div id="skills-panel" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 2px;">
         <button id="skill-btn-emp" onclick="window.handleSkillClick('emp')" class="skill-modern-btn" style="padding: 4px 2px; position: relative; overflow: hidden;">
@@ -392,6 +392,7 @@
 <div id="arsenal-modal" class="view-screen" style="position: absolute; inset: 0px; background: rgba(3, 7, 18, 0.97); display: none; flex-direction: column; z-index: 300; padding: 16px;">
       <div style="font-size:18px; font-weight:900; text-align:center; margin-bottom:12px; color:#38bdf8; display:flex; justify-content:space-between; align-items:center;">
         <span>💎 TACTICAL ARSENAL (16)</span>
+      <button onclick="window.closeArsenalShop()" style="background:rgba(239,68,68,0.25); border:1px solid #ef4444; color:#f87171; font-size:14px; font-weight:900; border-radius:8px; padding:3px 10px; cursor:pointer;">✕ CLOSE</button>
         <span style="font-size:13px; color:#facc15;">MY DIAMONDS: <span id="shop-my-chips">0</span> 💎</span>
       </div>
       <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-bottom:12px;">
@@ -499,6 +500,19 @@
   var maxVoices = 5;
   var bgmPlaying = false;
   var bgmTimer = null;
+
+  
+  window.openArsenalShop = function() {
+    initAudio();
+    var chipsEl = document.getElementById('shop-my-chips');
+    if (chipsEl) chipsEl.innerText = chips;
+    var modal = document.getElementById('arsenal-modal');
+    if (modal) modal.style.display = 'flex';
+  };
+  window.closeArsenalShop = function() {
+    var modal = document.getElementById('arsenal-modal');
+    if (modal) modal.style.display = 'none';
+  };
 
   function initAudio() {
     try {
@@ -635,6 +649,39 @@
   };
 
   var gold = 35;
+  window.gold = gold;
+  window.chips = chips;
+
+  window.getGold = function() { return gold; };
+  window.spendGold = function(amount) {
+    if (gold >= amount) {
+      gold -= amount;
+      window.gold = gold;
+      var el = document.getElementById('ui-gold');
+      if (el) el.innerText = gold;
+      return true;
+    }
+    return false;
+  };
+  window.addGold = function(amount) {
+    gold += amount;
+    window.gold = gold;
+    var el = document.getElementById('ui-gold');
+    if (el) el.innerText = gold;
+  };
+  window.getChips = function() { return chips; };
+  window.addChips = function(amount) {
+    chips += amount;
+    window.chips = chips;
+    localStorage.setItem('otd_chips', chips);
+    var el = document.getElementById('ui-chips');
+    if (el) el.innerText = chips;
+    var elLobby = document.getElementById('lobby-dia');
+    if (elLobby) elLobby.innerText = chips;
+    var elShop = document.getElementById('shop-my-chips');
+    if (elShop) elShop.innerText = chips;
+  };
+
   var chips = 0;
   var wave = 1;
   var kills = 0;
@@ -1028,10 +1075,10 @@
 
     // Dynamic Spitter (Ranged) Chance: 0% on Wave 1-2, scales up gradually in later waves
     var spitterChance = 0;
-    if (wave >= 12) spitterChance = 0.42;
-    else if (wave >= 8) spitterChance = 0.32;
-    else if (wave >= 5) spitterChance = 0.22;
-    else if (wave >= 3) spitterChance = 0.12;
+    if (wave >= 16) spitterChance = 0.40;
+    else if (wave >= 11) spitterChance = 0.28;
+    else if (wave >= 7) spitterChance = 0.18;
+    else if (wave >= 4) spitterChance = 0.08;
 
     if (roll < spitterChance) {
       type = 'spitter'; speed = 0.62; hp = Math.round(hp * 0.85); radius = 14; color = '#84cc16'; goldDrop = 4;
@@ -1317,7 +1364,7 @@
           enemyBullets.push({
             x: e.x, y: e.y,
             angle: angle, speed: 2.8 * gameSpeed,
-            damage: Math.max(2, Math.floor(2 + (wave - 1) * 0.75))
+            damage: (wave <= 6 ? 1 : (wave <= 10 ? 2 : Math.floor(2 + (wave - 10) * 0.5)))
           });
           e.lastShotTime = time;
         }
@@ -1989,12 +2036,8 @@
     window.showRewardedAd('lobby_dia', () => {
       window.dailyAdCount++;
       localStorage.setItem('otd_daily_ads', window.dailyAdCount);
-      window.diamonds += 15;
-      localStorage.setItem('otd_diamonds', window.diamonds);
-
-      var dEl = document.getElementById('ui-diamonds');
-      if (dEl) dEl.innerText = window.diamonds;
-      window.addFloatingText(window.fort.x, window.fort.y - 30, '💎 +15 Free Diamonds Acquired!', '#facc15');
+      window.addChips(15);
+      if (window.addFloatingText && window.fort) window.addFloatingText(window.fort.x, window.fort.y - 30, '💎 +15 Free Diamonds Acquired!', '#facc15');
       window.renderLobbyAdButton();
     });
   };
@@ -2134,10 +2177,7 @@
     var s = window.skills[type];
     if (!s) return;
     if (!s.unlocked) {
-      if ((window.gold || 0) >= s.cost) {
-        window.gold -= s.cost;
-        var gEl = document.getElementById('ui-gold');
-        if (gEl) gEl.innerText = window.gold;
+      if (window.spendGold(s.cost)) {
         s.unlocked = true;
         s.level = 1;
         s.upCost = s.upCost || Math.round(s.cost * 1.25);
