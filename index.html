@@ -505,7 +505,7 @@
       </div>
 
       <div style="font-size:11px; color:#64748b;">
-        DIAMONDS: <b id="lobby-my-chips" style="color:#facc15;">0</b> 💎<br><button id="btn-lobby-ad" onclick="window.watchLobbyAd()" class="btn-ad-reward" style="margin: 8px auto 0 auto;">📺 FREE DIAMONDS +15💎 (3/3)</button>
+        DIAMONDS: <b id="lobby-my-chips" style="color:#facc15;">0</b> 💎<br><button id="btn-lobby-ad" onclick="window.watchLobbyAd()" class="btn-ad-reward" style="margin: 8px auto 0 auto;">📺 FREE DIAMONDS +5💎 (3/3)</button>
       </div>
     </div><div id="combo-pill">🔥 5 COMBO!</div></div>
 
@@ -2383,8 +2383,8 @@
     window.showRewardedAd('lobby_dia', () => {
       window.dailyAdCount++;
       localStorage.setItem('otd_daily_ads', window.dailyAdCount);
-      window.addChips(15);
-      if (window.addFloatingText && window.fort) window.addFloatingText(window.fort.x, window.fort.y - 30, '💎 +15 Free Diamonds Acquired!', '#facc15');
+      window.addChips(5);
+      if (window.addFloatingText && window.fort) window.addFloatingText(window.fort.x, window.fort.y - 30, '💎 +5 Free Diamonds Acquired!', '#facc15');
       window.renderLobbyAdButton();
     });
   };
@@ -2394,7 +2394,7 @@
     if (!btn) return;
     var rem = window.MAX_DAILY_ADS - window.dailyAdCount;
     if (rem > 0) {
-      btn.innerHTML = `📺 FREE DIAMONDS +15💎 (${rem}/${window.MAX_DAILY_ADS})`;
+      btn.innerHTML = `📺 FREE DIAMONDS +5💎 (${rem}/${window.MAX_DAILY_ADS})`;
       btn.style.opacity = '1';
     } else {
       btn.innerHTML = `📺 Limit Reached (0/${window.MAX_DAILY_ADS})`;
