@@ -293,7 +293,7 @@
               <span style="font-size:12px; font-weight:900; color:#f8fafc;">⚡ FIRE RATE</span>
               <span class="quad-lvl-tag" id="lvl-badge-spd">Lv.2</span>
             </div>
-            <span style="font-size:10px; color:#94a3b8; font-weight:700; margin-top:2px;"><span id="b-spd-val">1.19</span>/초 <span style="color:#22c55e;">(+0.1)</span></span>
+            <span style="font-size:10px; color:#94a3b8; font-weight:700; margin-top:2px;"><span id="b-spd-val">1.19</span>/s <span style="color:#22c55e;">(+0.1)</span></span>
           </div>
           <span class="up-cost-tag" id="b-spd-cost">62G</span>
         </button>
@@ -418,7 +418,7 @@
       </div><div style="background: rgb(15, 23, 42); border: 1px solid rgb(30, 41, 59); border-radius: 10px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center;">
         <div style="display:flex; flex-direction:column; gap:2px;">
           <div style="font-size:13px; font-weight:800; color:#f8fafc;">[🌀 중력 특이점]</div>
-          <div style="font-size:10px; color:#94a3b8;">탄환 적중 시 1.5초간 미니 블랙홀 소환</div>
+          <div style="font-size:10px; color:#94a3b8;">탄환 적중 시 1.5s간 미니 블랙홀 소환</div>
         </div>
         <button style="background:#0284c7; color:white; border:none; font-size:11px; font-weight:800; padding:6px 10px; border-radius:6px; cursor:pointer;" onclick="window.buyArsenalItem('blackhole', 35, 'cards')">
           35 💎
@@ -426,7 +426,7 @@
       </div><div style="background: rgb(15, 23, 42); border: 1px solid rgb(30, 41, 59); border-radius: 10px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center;">
         <div style="display:flex; flex-direction:column; gap:2px;">
           <div style="font-size:13px; font-weight:800; color:#f8fafc;">[💣 지뢰 매설]</div>
-          <div style="font-size:10px; color:#94a3b8;">5초마다 타워 주변에 자동 폭발 지뢰 살포</div>
+          <div style="font-size:10px; color:#94a3b8;">5s마다 타워 주변에 자동 폭발 지뢰 살포</div>
         </div>
         <button style="background:#0284c7; color:white; border:none; font-size:11px; font-weight:800; padding:6px 10px; border-radius:6px; cursor:pointer;" onclick="window.buyArsenalItem('mine', 50, 'cards')">
           50 💎
@@ -434,7 +434,7 @@
       </div><div style="background: rgb(15, 23, 42); border: 1px solid rgb(30, 41, 59); border-radius: 10px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center;">
         <div style="display:flex; flex-direction:column; gap:2px;">
           <div style="font-size:13px; font-weight:800; color:#f8fafc;">[❄️ 절대영도 파동]</div>
-          <div style="font-size:10px; color:#94a3b8;">피격된 적을 1초간 완전 빙결(정지)</div>
+          <div style="font-size:10px; color:#94a3b8;">피격된 적을 1s간 완전 빙결(정지)</div>
         </div>
         <button style="background:#0284c7; color:white; border:none; font-size:11px; font-weight:800; padding:6px 10px; border-radius:6px; cursor:pointer;" onclick="window.buyArsenalItem('absolute_zero', 70, 'cards')">
           70 💎
@@ -683,7 +683,7 @@
   var perkPool = [
     { id: 'pierce', name: '관통 레이저', tag: '공격', desc: '탄환이 적을 1마리 관통합니다 (관통 시 대미지 65% 감쇄).' },
     { id: 'multishot', name: '멀티 배럴', tag: '특수', desc: '전방으로 탄환 2발을 동시 분할 발사합니다 (발당 70% 대미지).' },
-    { id: 'burn', name: '플라즈마 화염', tag: '원소', desc: '피격된 적에게 3초간 초당 도트 화염 대미지를 입힙니다.' },
+    { id: 'burn', name: '플라즈마 화염', tag: '원소', desc: '피격된 적에게 3s간 s당 도트 화염 대미지를 입힙니다.' },
     { id: 'freeze', name: '극저온 동결', tag: '제어', desc: '피격된 적의 이동 속도를 25% 둔화시킵니다.' },
     { id: 'lifesteal', name: '흡혈 나노봇', tag: '생존', desc: '적 처치 시 타워 체력을 +2씩 즉시 회복합니다.' },
     { id: 'gold', name: '연금술 코어', tag: '재화', desc: '몬스터 처치 시 획득하는 골드가 +1G 추가 지급됩니다.' }
@@ -891,7 +891,7 @@
           enemies.splice(i, 1);
         }
       }
-      addFloatingText(fort.x, fort.y - 50, `🚀 궤도 미사일 폭격! (${sk.dmgMult.toFixed(1)}x)`, '#f43f5e');
+      addFloatingText(fort.x, fort.y - 50, `🚀 ORBITAL NUKE BLAST! (${sk.dmgMult.toFixed(1)}x)`, '#f43f5e');
 
     } else if (type === 'shield') {
       sfx('emp');
@@ -1806,7 +1806,7 @@
     <div class="ad-video-mock">
       <div id="ad-brand-icon" style="font-size: 36px; animation: bounce 1s infinite;">🛸</div>
       <div id="ad-brand-text" style="font-size: 13px; font-weight: 800; color: #f8fafc; margin-top: 6px;">하이퍼 스페이스 방어 사령부</div>
-      <div id="ad-timer-text" style="font-size: 11px; color: #facc15; font-weight: 900; margin-top: 4px;">광고 시청 중... 5초 남음</div>
+      <div id="ad-timer-text" style="font-size: 11px; color: #facc15; font-weight: 900; margin-top: 4px;">광고 시청 중... 5s 남음</div>
       <div class="ad-progress-bar" id="ad-progress"></div>
     </div>
     <div style="font-size: 11px; color: #64748b; line-height: 1.4;">
@@ -1872,7 +1872,7 @@
 
     var duration = 5; // 5 seconds high-pace ad preview
     var remaining = duration;
-    timerEl.innerText = `광고 시청 중... ${remaining}초 남음`;
+    timerEl.innerText = `광고 시청 중... ${remaining}s 남음`;
 
     if (window.adInterval) clearInterval(window.adInterval);
     window.adInterval = setInterval(() => {
@@ -1881,7 +1881,7 @@
       progressEl.style.width = pct + '%';
 
       if (remaining > 0) {
-        timerEl.innerText = `광고 시청 중... ${remaining}초 남음`;
+        timerEl.innerText = `광고 시청 중... ${remaining}s 남음`;
       } else {
         clearInterval(window.adInterval);
         timerEl.innerText = '✅ REWARD CLAIMED! 보상이 지급됩니다.';
