@@ -995,18 +995,18 @@
   };
   window.getChips = function() { return chips; };
   window.addChips = function(amount) {
-    chips += amount;
+    chips = Math.max(0, chips + amount);
     window.chips = chips;
+    window.diamonds = chips;
     localStorage.setItem('otd_chips', chips);
-    var el = document.getElementById('ui-chips');
-    if (el) el.innerText = chips;
-    var elLobby = document.getElementById('lobby-dia');
-    if (elLobby) elLobby.innerText = chips;
-    var elShop = document.getElementById('shop-my-chips');
-    if (elShop) elShop.innerText = chips;
+    ['ui-chips', 'lobby-my-chips', 'shop-my-chips', 'ui-diamonds'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.innerText = chips;
+    });
   };
 
-  var chips = 0;
+  var chips = Math.max(0, parseInt(localStorage.getItem('otd_chips') || '0', 10) || 0);
+  window.chips = chips;
   var wave = 1;
   var kills = 0;
   window.battlePaused = true; var battlePaused = true;
@@ -1051,7 +1051,14 @@
     var bCritVal = document.getElementById('b-crit-val'); if (bCritVal) bCritVal.innerText = Math.round(fort.critRate * 100) + '%';
     var bCritCost = document.getElementById('b-crit-cost'); if (bCritCost) bCritCost.innerText = costs.crit + 'G';
     var lvlCrit = document.getElementById('lvl-badge-crit'); if (lvlCrit) lvlCrit.innerText = 'Lv.' + statLevels.crit;
+    var splitDamage = fort.multishot > 1 ? fort.multishot * 0.7 : 1;
+    var overcharge = performance.now() < (window.fortOverchargeUntil || 0) ? 1.75 : 1;
+    var estimatedDps = Math.round(fort.atk * fort.atkSpeed * splitDamage *
+      (1 + fort.critRate * 0.8) * overcharge);
+    var meter = document.getElementById('ui-live-dps'); if (meter) meter.innerText = estimatedDps;
+    var badge = document.getElementById('ui-dps'); if (badge) badge.innerText = 'DPS ' + estimatedDps;
   }
+  window.refreshStatUI = updateStatUI;
 
   var enemies = [];
   var bullets = [];
@@ -1088,14 +1095,42 @@
     { id: 'reactor', name: 'Supercharge Core', tier: 'LEGENDARY', tierColor: '#f59e0b', tag: 'LEGENDARY', desc: '💥 Increases Fortress ATK by +50% and bullet speed by +30%.' },
     { id: 'titan', name: 'Titan Armor', tier: 'LEGENDARY', tierColor: '#f59e0b', tag: 'DEFENSE', desc: '🛡️ Fortress Max HP +100 and auto-repairs +3 HP every 2 seconds.' }
   ];
+  var perkStacks = {};
+  var previousPerkChoices = [];
+  var perkWeights = { COMMON: 10, RARE: 6, EPIC: 3, LEGENDARY: 1 };
 
-  window.openPerkChoice = function() {
+  function drawPerks() {
+    var remaining = perkPool.slice();
+    var choices = [];
+    while (choices.length < 3 && remaining.length) {
+      var total = remaining.reduce(function(sum, p) { return sum + perkWeights[p.tier]; }, 0);
+      var roll = Math.random() * total;
+      var index = 0;
+      for (; index < remaining.length - 1; index++) {
+        roll -= perkWeights[remaining[index].tier];
+        if (roll < 0) break;
+      }
+      choices.push(remaining.splice(index, 1)[0]);
+    }
+    return choices;
+  }
+
+  window.openPerkChoice = function(reroll) {
     battlePaused = true;
     window.battlePaused = true;
     var container = document.getElementById('perk-cards-container');
     container.innerHTML = '';
-    var shuffled = perkPool.slice().sort(function() { return 0.5 - Math.random(); });
-    var choices = shuffled.slice(0, 3);
+    var choices = drawPerks();
+    if (reroll && previousPerkChoices.length === 3) {
+      for (var attempt = 0; attempt < 12 && choices.every(function(p) { return previousPerkChoices.includes(p.id); }); attempt++) {
+        choices = drawPerks();
+      }
+      if (choices.every(function(p) { return previousPerkChoices.includes(p.id); })) {
+        var alternate = perkPool.find(function(p) { return !previousPerkChoices.includes(p.id); });
+        if (alternate) choices[0] = alternate;
+      }
+    }
+    previousPerkChoices = choices.map(function(p) { return p.id; });
 
     for (var i = 0; i < choices.length; i++) {
       var p = choices[i];
@@ -1112,7 +1147,7 @@
       card.innerHTML = `
         <div class="perk-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
           <div style="display: flex; align-items: center; gap: 6px;">
-            <span class="perk-name" style="font-weight: 900; font-size: 13px; color: #fff;">${p.name}</span>
+            <span class="perk-name" style="font-weight: 900; font-size: 13px; color: #fff;">${p.name}${perkStacks[p.id] ? ' (owned x' + perkStacks[p.id] + ')' : ''}</span>
             <span class="perk-tier" style="background: ${p.tierColor}; color: #fff; font-weight: 900; font-size: 8.5px; padding: 2px 6px; border-radius: 4px; box-shadow: 0 0 8px ${p.tierColor}aa;">[ ${p.tier} ]</span>
           </div>
           <span class="perk-tag" style="font-size: 9px; font-weight: 800; color: #94a3b8; background: rgba(51,65,85,0.6); padding: 2px 6px; border-radius: 4px;">${p.tag}</span>
@@ -1127,17 +1162,26 @@
     document.getElementById('perk-modal').style.display = 'flex';
   };
 
+  window.rerollPerks = function() {
+    if (chips < 1) return;
+    window.addChips(-1);
+    window.openPerkChoice(true);
+  };
+  document.getElementById('btn-reroll').onclick = window.rerollPerks;
+
   function applyPerk(id, name) {
     initAudio();
     sfx('coin');
     if (id === 'pierce') fort.pierce += 1;
     else if (id === 'multishot') fort.multishot += 1;
     else if (id === 'burn') fort.burnDamage += (3 + wave);
-    else if (id === 'freeze') fort.freezeSlow = 0.25;
+    else if (id === 'freeze') fort.freezeSlow = Math.min(0.65, 1 - Math.pow(0.75, (perkStacks.freeze || 0) + 1));
     else if (id === 'lifesteal') fort.lifesteal += 2;
     else if (id === 'gold') fort.bonusGold += 1;
-    else if (id === 'reactor') { fort.atk = Math.round(fort.atk * 1.5); fort.bulletSpeed = (fort.bulletSpeed || 7) * 1.3; }
+    else if (id === 'reactor') { fort.atk = Math.round(fort.atk * 1.5); fort.bulletSpeed = (fort.bulletSpeed || 10.5) * 1.3; }
     else if (id === 'titan') { fort.maxHp += 100; fort.hp += 100; }
+    perkStacks[id] = (perkStacks[id] || 0) + 1;
+    updateStatUI();
 
     addFloatingText(fort.x, fort.y - 45, `PERK: [${name}]`, '#38bdf8');
     document.getElementById('perk-modal').style.display = 'none';
@@ -1167,7 +1211,29 @@
     fort.atkSpeed = 0.95;
     fort.range = 150;
     fort.critRate = 0.05;
+    fort.shieldTime = 0;
+    fort.lastShot = 0;
+    fort.pierce = 0;
     fort.multishot = 1;
+    fort.burnDamage = 0;
+    fort.freezeSlow = 0;
+    fort.lifesteal = 0;
+    fort.bonusGold = 0;
+    fort.bulletSpeed = 10.5;
+    window.fortOverchargeUntil = 0;
+    window.hasUsedReviveThisRun = false;
+    perkStacks = {};
+    previousPerkChoices = [];
+    var skillDefaults = {
+      emp: [40, 50, 14], nuke: [60, 75, 28], shield: [50, 65, 16],
+      repair: [45, 60, 22], overcharge: [45, 55, 18]
+    };
+    Object.keys(skillDefaults).forEach(function(type) {
+      var s = window.skills && window.skills[type];
+      if (!s) return;
+      s.unlocked = false; s.level = 0; s.cost = skillDefaults[type][0];
+      s.upCost = skillDefaults[type][1]; s.cd = skillDefaults[type][2]; s.lastUsed = -999;
+    });
     gold = 35;
     wave = 1;
     kills = 0;
@@ -1238,7 +1304,10 @@
     bullets = [];
     enemyBullets = [];
     missiles = [];
+    window.enemies = enemies;
+    window.bullets = bullets;
     battlePaused = false;
+    window.battlePaused = false;
     activeBoss = null;
 
     // Mathematical Exponential Wave Scaling
@@ -1384,6 +1453,8 @@
       enemiesSpawned++;
 
       document.getElementById('boss-name').children[0].innerText = '👑 Dreadnought Alien Queen';
+      document.getElementById('boss-hp-fill').style.width = '100%';
+      document.getElementById('boss-hp-num').innerText = '100%';
       document.getElementById('boss-bar-wrap').style.display = 'flex';
       return;
     }
@@ -1510,6 +1581,41 @@
     return candidate;
   }
 
+  function defeatEnemy(enemy, index) {
+    var reward = enemy.goldDrop + fort.bonusGold;
+    gold += reward;
+    window.gold = gold;
+    kills++;
+    if (fort.lifesteal > 0) {
+      fort.hp = Math.min(fort.maxHp, fort.hp + fort.lifesteal);
+      addFloatingText(fort.x, fort.y + 20, `+${fort.lifesteal} HP`, '#10b981');
+    }
+    document.getElementById('ui-gold').innerText = gold;
+    addFloatingText(enemy.x, enemy.y, `+${reward}G`, '#facc15');
+    addSplatter(enemy.x, enemy.y, enemy.color);
+    if (enemy.isBoss) {
+      window.addChips(enemy.chipDrop);
+      addFloatingText(enemy.x, enemy.y - 20, `+${enemy.chipDrop}💎`, '#38bdf8');
+      screenShake = 16;
+      activeBoss = null;
+      document.getElementById('boss-bar-wrap').style.display = 'none';
+    }
+    enemies.splice(index, 1);
+  }
+
+  window.applyNukeDamage = function(damage) {
+    for (var i = enemies.length - 1; i >= 0; i--) {
+      var enemy = enemies[i];
+      enemy.hp -= damage;
+      if (enemy.hp <= 0) defeatEnemy(enemy, i);
+      else if (enemy.isBoss) {
+        var percent = Math.round(enemy.hp / enemy.maxHp * 100);
+        document.getElementById('boss-hp-fill').style.width = percent + '%';
+        document.getElementById('boss-hp-num').innerText = percent + '%';
+      }
+    }
+  };
+
   function update(time) {
     if (battlePaused || !gameStarted) return;
 
@@ -1519,6 +1625,10 @@
     if (window.renderSkillButtons && (!window.__lastSkillTick || time - window.__lastSkillTick > 100)) {
       window.__lastSkillTick = time;
       window.renderSkillButtons();
+    }
+    if (!window.__lastDpsTick || time - window.__lastDpsTick > 250) {
+      window.__lastDpsTick = time;
+      updateStatUI();
     }
     energyRingAngle += 0.02 * gameSpeed;
 
@@ -1560,7 +1670,7 @@
           bullets.push({
             x: fort.x + Math.cos(targetAngle + spread) * 24,
             y: fort.y + Math.sin(targetAngle + spread) * 24,
-            target: target, speed: 10.5 * gameSpeed,
+            target: target, speed: fort.bulletSpeed * gameSpeed,
             damage: shotDmg, isCrit: isCrit,
             angle: targetAngle + spread,
             pierceLeft: fort.pierce,
@@ -1591,7 +1701,7 @@
           b.hitEnemies.push(e);
 
           if (fort.burnDamage > 0) e.burnTime = 3.0;
-          if (fort.freezeSlow > 0) e.speed *= (1 - fort.freezeSlow);
+          if (fort.freezeSlow > 0) e.slowTime = 1.5;
 
           createHitDebris(b.x, b.y, b.isCrit ? '#facc15' : '#38bdf8', 6);
           addFloatingText(b.x, b.y - 10, (b.isCrit ? 'CRIT ' : '') + b.damage, b.isCrit ? '#facc15' : '#ffffff');
@@ -1604,24 +1714,7 @@
           }
 
           if (e.hp <= 0) {
-            gold += e.goldDrop + fort.bonusGold;
-            kills++;
-            if (fort.lifesteal > 0) {
-              fort.hp = Math.min(fort.maxHp, fort.hp + fort.lifesteal);
-              addFloatingText(fort.x, fort.y + 20, `+${fort.lifesteal} HP`, '#10b981');
-            }
-            document.getElementById('ui-gold').innerText = gold;
-            addFloatingText(e.x, e.y, `+${e.goldDrop + fort.bonusGold}G`, '#facc15');
-            addSplatter(e.x, e.y, e.color);
-
-            if (e.isBoss) {
-              chips += e.chipDrop;
-              document.getElementById('ui-chips').innerText = chips;
-              addFloatingText(e.x, e.y - 20, `+${e.chipDrop}💎`, '#38bdf8');
-              screenShake = 16;
-              document.getElementById('boss-bar-wrap').style.display = 'none';
-            }
-            enemies.splice(j, 1);
+            defeatEnemy(e, j);
           }
 
           if (b.pierceLeft > 0) {
@@ -1643,9 +1736,7 @@
         e.hp -= (fort.burnDamage * dt);
         if (Math.random() < 0.2) createHitDebris(e.x, e.y, '#f97316', 1);
         if (e.hp <= 0) {
-          gold += e.goldDrop + fort.bonusGold;
-          kills++;
-          enemies.splice(i, 1);
+          defeatEnemy(e, i);
         }
       }
     }
@@ -1688,7 +1779,8 @@
       var angle = Math.atan2(fort.y - e.y, fort.x - e.x);
       var distToFort = Math.hypot(fort.x - e.x, fort.y - e.y);
 
-      if (e.type === 'spitter' && distToFort < 185) {
+      var spitterStandOff = Math.min(185, Math.max(80, fort.range - 12));
+      if (e.type === 'spitter' && distToFort < spitterStandOff) {
         if (time - e.lastShotTime > (2500 / gameSpeed)) {
           enemyBullets.push({
             x: e.x, y: e.y,
@@ -1698,9 +1790,11 @@
           e.lastShotTime = time;
         }
       } else {
-        e.x += Math.cos(angle) * (e.speed * gameSpeed);
-        e.y += Math.sin(angle) * (e.speed * gameSpeed);
+        var moveSpeed = e.speed * (e.slowTime > 0 ? 1 - fort.freezeSlow : 1);
+        e.x += Math.cos(angle) * (moveSpeed * gameSpeed);
+        e.y += Math.sin(angle) * (moveSpeed * gameSpeed);
       }
+      if (e.slowTime > 0) e.slowTime = Math.max(0, e.slowTime - dt);
 
       e.legAnim += 0.2 * gameSpeed;
 
@@ -2130,6 +2224,7 @@
 
   function triggerWaveClear() {
     battlePaused = true;
+    window.battlePaused = true;
     var rewardG = 40 + wave * 10;
     var rewardC = 3 + wave * 2;
     document.getElementById('clr-gold').innerText = `+${rewardG}G`;
@@ -2142,17 +2237,19 @@
     var rewardC = 3 + wave * 2;
     if (doubleReward) { rewardG *= 2; rewardC *= 2; }
     gold += rewardG; window.gold = gold;
-    chips += rewardC;
+    window.addChips(rewardC);
     var gEl = document.getElementById('ui-gold'); if (gEl) gEl.innerText = gold;
     document.getElementById('clear-popup').style.display = 'none';
 
     // Keep battle paused while choosing perks!
     battlePaused = true;
+    window.battlePaused = true;
     window.openPerkChoice();
   };
 
   function triggerGameOver() {
     battlePaused = true;
+    window.battlePaused = true;
     document.getElementById('danger-vignette').style.display = 'none';
     document.getElementById('gov-wave').innerText = wave;
     document.getElementById('gov-kills').innerText = kills;
@@ -2164,47 +2261,11 @@
     fort.hp = fort.maxHp;
     document.getElementById('gameover-popup').style.display = 'none';
     battlePaused = false;
+    window.battlePaused = false;
   };
 
   window.restartBattle = function() {
-    gold = 35;
-    wave = 1;
-    kills = 0;
-    fort.hp = fort.maxHp;
-    fort.atk = 10;
-    fort.atkSpeed = 1.2;
-    fort.range = 140;
-    costs.atk = 15; costs.spd = 20; costs.rng = 22; costs.crit = 25;
-
-    fort.pierce = 0;
-    fort.multishot = (selectedTowerClass === 'shotgun' ? 3 : 1);
-    fort.burnDamage = 0;
-    fort.freezeSlow = 0;
-    fort.lifesteal = 0;
-    fort.bonusGold = 0;
-
-    skills.emp.unlocked = false;
-    skills.nuke.unlocked = false;
-    skills.shield.unlocked = false;
-
-    document.getElementById('card-emp').classList.remove('unlocked');
-    document.getElementById('act-emp').classList.add('disabled');
-    document.getElementById('txt-emp').innerText = 'UNLOCK';
-    document.getElementById('cost-emp').innerText = '40G';
-
-    document.getElementById('card-nuke').classList.remove('unlocked');
-    document.getElementById('act-nuke').classList.add('disabled');
-    document.getElementById('txt-nuke').innerText = 'UNLOCK';
-    document.getElementById('cost-nuke').innerText = '60G';
-
-    document.getElementById('card-shield').classList.remove('unlocked');
-    document.getElementById('act-shield').classList.add('disabled');
-    document.getElementById('txt-shield').innerText = 'UNLOCK';
-    document.getElementById('cost-shield').innerText = '50G';
-
-    document.getElementById('gameover-popup').style.display = 'none';
-    var cm2 = document.getElementById('class-modal'); if (cm2) cm2.style.display = 'flex'; else { var ml2 = document.getElementById('main-lobby-screen'); if (ml2) ml2.style.display = 'flex'; }
-    gameStarted = false;
+    window.confirmClassAndStart();
   };
 
   var cmInit = document.getElementById('class-modal'); if (cmInit) cmInit.style.display = 'flex';
@@ -2577,10 +2638,7 @@
       if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 40, `⚡ EMP STUN (${dur.toFixed(1)}s)!`, '#38bdf8');
     } else if (type === 'nuke') {
       var nukeDmg = 50 + s.level * 86;
-      if (window.enemies) {
-        window.enemies.forEach(function(en) { en.hp -= nukeDmg; });
-        window.enemies = window.enemies.filter(function(en) { return en.hp > 0; });
-      }
+      if (window.applyNukeDamage) window.applyNukeDamage(nukeDmg);
       window.screenShake = 22;
       if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 40, `🚀 ORBITAL NUKE (${nukeDmg} DMG)!`, '#f97316');
     } else if (type === 'shield') {
