@@ -372,7 +372,7 @@ body { background: #33521f !important; font-family: "Trebuchet MS", "Segoe UI", 
     <div class="currency-group"><div id="hud-dps-meter" class="badge" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgb(250, 204, 21); color: rgb(250, 204, 21); font-size: 10px; font-weight: 900; padding: 4px 7px; border-radius: 6px;">⚡ <span id="ui-live-dps">21</span> DPS</div>
       <div class="badge gold-c">🪙 <span id="ui-gold">35</span></div>
       <div class="badge chip-c">💎 <span id="ui-chips">0</span></div>
-      <button id="btn-arsenal" class="nav-btn" style="background: linear-gradient(135deg, rgb(2, 132, 199), rgb(37, 99, 235)); color: white; font-weight: 800; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; display: none;">💎 ARSENAL</button><div id="hud-dps-badge" class="hud-badge" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(244, 63, 94, 0.4); color: rgb(244, 63, 94); padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 4px;">🎯 <span id="ui-dps">KILLS 0</span></div><button class="nav-btn speed-btn" id="btn-speed" onclick="toggleSpeed(event)">⏩ 1x</button>
+      <button id="btn-arsenal" class="nav-btn" style="background: linear-gradient(135deg, rgb(2, 132, 199), rgb(37, 99, 235)); color: white; font-weight: 800; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; display: none;">💎 ARSENAL</button><div id="hud-dps-badge" class="hud-badge" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(244, 63, 94, 0.4); color: rgb(244, 63, 94); padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 4px;">🎯 <span id="ui-dps">KILLS 0</span></div><button class="nav-btn" id="btn-pause" title="Pause">⏸</button><button class="nav-btn speed-btn" id="btn-speed" onclick="toggleSpeed(event)">⏩ 1x</button>
       <button class="nav-btn" onclick="openLeaderboard(event)">🏆</button>
       <button class="nav-btn" id="bgm-btn" onclick="toggleBGM(event)">🔊</button>
     </div>
@@ -536,6 +536,15 @@ body { background: #33521f !important; font-family: "Trebuchet MS", "Segoe UI", 
       <button id="btn-next-wave" onclick="proceedNextWave(false)" style="background: linear-gradient(135deg, rgb(245, 158, 11), rgb(217, 119, 6)); border: none; border-radius: 10px; color: rgb(255, 255, 255); font-weight: 900; font-size: 14px; padding: 12px 18px; cursor: pointer; width: 100%; box-shadow: rgba(245, 158, 11, 0.45) 0px 4px 15px; display: flex; align-items: center; justify-content: center; gap: 8px;">
         ⏩ NEXT WAVE
       </button></div>
+  </div>
+
+  <!-- Pause Modal -->
+  <div id="pause-popup" class="popup-modal" style="display: none;">
+    <div class="popup-card">
+      <div class="popup-title" style="color: #38bdf8;">⏸ PAUSED</div>
+      <div class="popup-desc" id="pause-desc">Game paused</div>
+      <button class="sub-btn" id="btn-resume">▶ RESUME</button>
+    </div>
   </div>
 
   <!-- Game Over Modal -->
@@ -1988,7 +1997,7 @@ var currentShopTab = 'turrets';
     window.__lastFrameT = time;
     if (!(rawDt > 0)) rawDt = 0;
     if (rawDt > 0.25) rawDt = 0.25; // tab-suspend safety: cap catch-up per frame
-    if (battlePaused || window.__cgAdPause) { __simAcc = 0; return; } // combat clock frozen in pause/menus
+    if (battlePaused || window.__cgAdPause || window.__userPaused) { __simAcc = 0; return; } // combat clock frozen in pause/menus
     __simAcc += rawDt;
     var __step = 1/60, __n = 0;
     while (__simAcc >= __step && __n < 30) {
@@ -1997,13 +2006,13 @@ var currentShopTab = 'turrets';
       simStep(simTimeMs);
       __simAcc -= __step;
       __n++;
-      if (battlePaused || window.__cgAdPause) { __simAcc = 0; break; } // stop at the exact pause tick
+      if (battlePaused || window.__cgAdPause || window.__userPaused) { __simAcc = 0; break; } // stop at the exact pause tick
     }
     if (__n >= 30) __simAcc = 0; // spiral-of-death guard
   }
 
   function simStep(time) {
-    if (battlePaused || !gameStarted || window.__cgAdPause) return;
+    if (battlePaused || !gameStarted || window.__cgAdPause || window.__userPaused) return;
 
     var dt = 0.016 * gameSpeed;
     var timeSec = time / 1000;
@@ -3373,4 +3382,36 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
   #upgrades-quadrant-grid .up-quad-btn { padding: 3px 6px !important; }
 }
 </style>
+<script>
+  // ===== PAUSE SYSTEM: auto-pause on background, manual pause button =====
+  (function() {
+    window.__userPaused = false;
+    function pp() { return document.getElementById('pause-popup'); }
+    window.pauseGame = function(src) {
+      if (!window.gameStarted) return;
+      if (window.__userPaused) return;
+      window.__userPaused = true;
+      var d = document.getElementById('pause-desc');
+      if (d) d.innerText = (src === 'auto') ? 'Auto-paused while you were away' : 'Game paused';
+      var p = pp(); if (p) p.style.display = 'flex';
+    };
+    window.resumeGame = function() {
+      window.__userPaused = false;
+      var p = pp(); if (p) p.style.display = 'none';
+    };
+    window.__checkAutoPause = function() {
+      if (document.hidden && window.gameStarted) window.pauseGame('auto');
+    };
+    document.addEventListener('visibilitychange', window.__checkAutoPause);
+    window.addEventListener('pagehide', function() { if (window.gameStarted) window.pauseGame('auto'); });
+    var bp = document.getElementById('btn-pause');
+    if (bp) bp.addEventListener('click', function(ev) {
+      ev.stopPropagation();
+      if (window.__userPaused) window.resumeGame(); else window.pauseGame('manual');
+    });
+    var br = document.getElementById('btn-resume');
+    if (br) br.addEventListener('click', function(ev) { ev.stopPropagation(); window.resumeGame(); });
+    window.__pauseWired = true;
+  })();
+</script>
 </body></html>
