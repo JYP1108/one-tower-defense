@@ -104,6 +104,7 @@
     .perk-cards-wrap { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; }
     .perk-card { background: #0f172a; border: 2px solid #1e293b; border-radius: 12px; padding: 12px 14px; cursor: pointer; text-align: left; transition: all 0.15s; }
     .perk-card:hover, .perk-card:active { border-color: #38bdf8; background: #1e293b; transform: scale(1.02); }
+    .perk-card:focus, .perk-card:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; border-color: #38bdf8 !important; }
     .perk-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
     .perk-name { font-weight: 800; font-size: 14px; color: #f8fafc; }
     .perk-tag { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #2563eb; color: white; }
@@ -1489,8 +1490,12 @@ var currentShopTab = 'turrets';
 
     for (var i = 0; i < choices.length; i++) {
       var p = choices[i];
-      var card = document.createElement('div');
+      var card = document.createElement('button');
+      card.type = 'button';
       card.className = 'perk-card';
+      card.style.width = '100%';
+      card.style.textAlign = 'left';
+      card.style.font = 'inherit';
       card.style.border = '1px solid ' + p.tierColor;
       card.style.boxShadow = '0 0 14px ' + p.tierColor + '44';
       card.style.background = 'rgba(15, 23, 42, 0.95)';
@@ -1515,6 +1520,8 @@ var currentShopTab = 'turrets';
       container.appendChild(card);
     }
     document.getElementById('perk-modal').style.display = 'flex';
+    var firstCard = container.querySelector('.perk-card');
+    if (firstCard) { try { firstCard.focus({ preventScroll: true }); } catch(e) { firstCard.focus(); } }
   };
 
   window.rerollPerks = function() {
@@ -2579,7 +2586,12 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
               var env = window.CrazyGames.SDK.environment || ((window.CrazyGames.SDK.getEnvironment) ? window.CrazyGames.SDK.getEnvironment() : 'unknown');
               window.__cgEnv = env;
               // 'local' shows CG demo ads (official dev/test path); 'disabled' (e.g. GitHub Pages) hides ad buttons
-              window.__cgAdsAvailable = (env === 'crazygames' || env === 'local');
+              // Basic Launch: ads are disabled on crazygames.com, so rewarded ad buttons must
+              // never render there (official rule: no rewarded ad buttons without effect).
+              // 'local' keeps CG demo ads for development testing. Flip to true only after
+              // Full Launch monetization is approved.
+              var CG_REWARDED_ENABLED = false;
+              window.__cgAdsAvailable = (env === 'local') || (env === 'crazygames' && CG_REWARDED_ENABLED);
             } catch(e) { window.__cgAdsAvailable = false; }
           };
           if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.init) {
