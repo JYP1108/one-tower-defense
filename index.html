@@ -9,22 +9,16 @@
 </script>
 <script>
 
-  // URL Auto-Reset handler (e.g. ?reset=1)
-  if (window.location.search && (window.location.search.includes('reset') || window.location.search.includes('clear'))) {
-    try {
-      localStorage.clear();
-      sessionStorage.clear();
-      if (window.history && window.history.replaceState) {
-        window.history.replaceState(null, '', window.location.pathname);
-      }
-    } catch(e) {}
-  }
-
+  // Reset clears ONLY this game's keys (prefix otd_). Other pages on jyp1108.github.io share this origin's storage.
   window.resetAllGameData = function() {
     if (confirm('정말 초기화 하시겠습니까? (Are you sure you want to reset all game progress?)')) {
       try {
-        localStorage.clear();
-        sessionStorage.clear();
+        var k, doomed = [], i;
+        for (i = 0; i < localStorage.length; i++) { k = localStorage.key(i); if (k && k.indexOf('otd_') === 0) doomed.push(k); }
+        doomed.forEach(function(key) { localStorage.removeItem(key); });
+        doomed = [];
+        for (i = 0; i < sessionStorage.length; i++) { k = sessionStorage.key(i); if (k && k.indexOf('otd_') === 0) doomed.push(k); }
+        doomed.forEach(function(key) { sessionStorage.removeItem(key); });
       } catch(e) {}
       window.location.reload();
     }
@@ -659,22 +653,16 @@ body { background: #33521f !important; font-family: "Trebuchet MS", "Segoe UI", 
 
 <script>
 
-  // URL Auto-Reset handler (e.g. ?reset=1)
-  if (window.location.search && (window.location.search.includes('reset') || window.location.search.includes('clear'))) {
-    try {
-      localStorage.clear();
-      sessionStorage.clear();
-      if (window.history && window.history.replaceState) {
-        window.history.replaceState(null, '', window.location.pathname);
-      }
-    } catch(e) {}
-  }
-
+  // Reset clears ONLY this game's keys (prefix otd_). Other pages on jyp1108.github.io share this origin's storage.
   window.resetAllGameData = function() {
     if (confirm('정말 초기화 하시겠습니까? (Are you sure you want to reset all game progress?)')) {
       try {
-        localStorage.clear();
-        sessionStorage.clear();
+        var k, doomed = [], i;
+        for (i = 0; i < localStorage.length; i++) { k = localStorage.key(i); if (k && k.indexOf('otd_') === 0) doomed.push(k); }
+        doomed.forEach(function(key) { localStorage.removeItem(key); });
+        doomed = [];
+        for (i = 0; i < sessionStorage.length; i++) { k = sessionStorage.key(i); if (k && k.indexOf('otd_') === 0) doomed.push(k); }
+        doomed.forEach(function(key) { sessionStorage.removeItem(key); });
       } catch(e) {}
       window.location.reload();
     }
@@ -1585,6 +1573,12 @@ var currentShopTab = 'turrets';
     if (window.__cgGameplayStart) window.__cgGameplayStart();
     window.__cgReviveUsed = false; // revive ad: once per run
     window.__cgRunId = (window.__cgRunId || 0) + 1; // invalidate any ad reward still in flight from a previous run
+    try {
+      if (!localStorage.getItem('otd_tut_v1')) {
+        localStorage.setItem('otd_tut_v1', '1');
+        setTimeout(function() { if (window.showWave1Tutorial) window.showWave1Tutorial(); }, 2500);
+      }
+    } catch(e) {}
 
     // Reset clean stats for Wave 1
     fort.hp = fort.maxHp = 100;
@@ -2476,6 +2470,14 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
     el.style.display = 'block';
     setTimeout(function() { el.style.display = 'none'; }, 2200);
   };
+  window.showWave1Tutorial = function() {
+    var el = document.getElementById('tut-banner');
+    if (!el) return;
+    el.style.display = 'block';
+    clearTimeout(window.__tutTimer);
+    window.__tutTimer = setTimeout(function() { el.style.display = 'none'; }, 9000);
+    el.onclick = function() { el.style.display = 'none'; };
+  };
   var CG_LEADERBOARD_KEY = ''; // TODO: 32-byte base64 key from CrazyGames dev portal (leaderboards are invite-only)
   function cgSetAdPause(on) {
     window.__cgAdPause = on;
@@ -3081,22 +3083,16 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
 
 <script>
 
-  // URL Auto-Reset handler (e.g. ?reset=1)
-  if (window.location.search && (window.location.search.includes('reset') || window.location.search.includes('clear'))) {
-    try {
-      localStorage.clear();
-      sessionStorage.clear();
-      if (window.history && window.history.replaceState) {
-        window.history.replaceState(null, '', window.location.pathname);
-      }
-    } catch(e) {}
-  }
-
+  // Reset clears ONLY this game's keys (prefix otd_). Other pages on jyp1108.github.io share this origin's storage.
   window.resetAllGameData = function() {
     if (confirm('정말 초기화 하시겠습니까? (Are you sure you want to reset all game progress?)')) {
       try {
-        localStorage.clear();
-        sessionStorage.clear();
+        var k, doomed = [], i;
+        for (i = 0; i < localStorage.length; i++) { k = localStorage.key(i); if (k && k.indexOf('otd_') === 0) doomed.push(k); }
+        doomed.forEach(function(key) { localStorage.removeItem(key); });
+        doomed = [];
+        for (i = 0; i < sessionStorage.length; i++) { k = sessionStorage.key(i); if (k && k.indexOf('otd_') === 0) doomed.push(k); }
+        doomed.forEach(function(key) { sessionStorage.removeItem(key); });
       } catch(e) {}
       window.location.reload();
     }
@@ -3314,12 +3310,49 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
 
       card.innerHTML = `
         <div style="position:absolute; inset:0; ${cdOverlayStyle} pointer-events:none; border-radius:8px;"></div>
-        <div style="font-size:14px; position:relative; z-index:2;">${s.icon}</div>
-        <div style="font-weight:900; font-size:9px; margin-top:1px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; position:relative; z-index:2; line-height:1.2; text-align:center; max-width:100%; overflow:hidden;">${s.name} ${lvlBadge}</div>
-        <div style="position:relative; z-index:2;">${statusText}</div>
-        <div style="position:relative; z-index:2;">${upBtnHtml}</div>
+        <div style="font-size:20px; position:relative; z-index:2; line-height:1.15;">${s.icon}</div>
+        <div style="font-weight:900; font-size:9px; margin-top:1px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; position:relative; z-index:2; line-height:1.2; text-align:center; max-width:100%; overflow:hidden;">${s.name.replace('OVERCHARGE', 'OVER\u200bCHARGE')} ${lvlBadge}</div>
+        <div onclick="window.openSkillInfo('${t}', event)" style="position:absolute; top:2px; right:2px; z-index:3; width:16px; height:16px; border-radius:50%; background:rgba(226,232,240,0.85); color:#0f172a; font-size:10px; font-weight:900; line-height:16px; text-align:center; cursor:pointer;">i</div>
       `;
     });
+  };
+
+  window.SKILL_INFO = {
+    emp: 'Stuns ALL enemies on the field. Higher level = longer stun.',
+    nuke: 'Orbital strike that hits every enemy with huge damage. Higher level = more damage.',
+    shield: 'Makes the fortress invincible for a few seconds. Higher level = longer shield.',
+    repair: 'Repairs the fortress: 10% of max HP per level (max Lv.10).',
+    overcharge: 'Greatly boosts fire rate for a short time. Higher level = longer boost.'
+  };
+  window.openSkillInfo = function(type, ev) {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    var s = window.skills[type];
+    var m = document.getElementById('skill-info-modal');
+    if (!s || !m) return;
+    document.getElementById('si-icon').innerText = s.icon;
+    document.getElementById('si-name').innerText = s.name;
+    document.getElementById('si-level').innerText = s.unlocked ? ('Lv.' + s.level) : 'NOT UNLOCKED';
+    document.getElementById('si-desc').innerText = window.SKILL_INFO[type] || '';
+    document.getElementById('si-cd').innerText = 'Cooldown: ' + s.cd + 's';
+    var act = document.getElementById('si-action');
+    if (!s.unlocked) {
+      act.innerText = 'UNLOCK (' + s.cost + 'G)';
+      act.style.display = 'block';
+      act.onclick = function() { window.closeSkillInfo(); window.handleSkillClick(type); };
+    } else {
+      var effMax = (type === 'repair') ? Math.min(window.MAX_SKILL_LEVEL, window.REPAIR_MAX_LEVEL) : window.MAX_SKILL_LEVEL;
+      if (s.level >= effMax) { act.style.display = 'none'; }
+      else {
+        act.innerText = 'UPGRADE TO Lv.' + (s.level + 1) + ' (' + s.upCost + 'G)';
+        act.style.display = 'block';
+        act.onclick = function() { window.closeSkillInfo(); window.upgradeSkill(type); };
+      }
+    }
+    m.style.display = 'flex';
+  };
+  window.closeSkillInfo = function() {
+    var m = document.getElementById('skill-info-modal');
+    if (m) m.style.display = 'none';
   };
 
   // Initialize
@@ -3390,15 +3423,6 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
 })();
 </script>
 <style>
-@media (max-width: 400px) {
-  #skills-panel .skill-modern-btn { padding: 4px 2px !important; gap: 2px !important; }
-  #skills-panel .skill-modern-btn > div { max-width: 100%; }
-  #skills-panel .skill-modern-btn > div:nth-child(n+3) { font-size: 8px !important; }
-}
-@media (max-width: 340px) {
-  #skills-panel .skill-modern-btn > div:nth-child(n+3) { letter-spacing: -0.3px !important; }
-  #skills-panel .skill-modern-btn { padding: 4px 1px !important; }
-}
 #skills-panel .skill-modern-btn { min-width: 0; }
 </style>
 <style>
@@ -3463,4 +3487,16 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
 </script>
 <div id="ad-blocker" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99999; align-items:center; justify-content:center; color:#ffffff; font-weight:800; font-size:18px; letter-spacing:1px;">AD LOADING&hellip;</div>
 <div id="ad-toast" style="display:none; position:fixed; top:16%; left:50%; transform:translateX(-50%); background:#22c55e; color:#ffffff; padding:12px 20px; border-radius:14px; z-index:100000; font-weight:800; font-size:16px; box-shadow:0 6px 24px rgba(0,0,0,0.35);"></div>
+<div id="tut-banner" style="display:none; position:fixed; top:30%; left:50%; transform:translateX(-50%); background:rgba(9,13,22,0.93); border:2px solid #facc15; color:#ffffff; padding:12px 16px; border-radius:14px; z-index:50000; font-weight:800; font-size:14px; text-align:center; line-height:1.55; max-width:86%; cursor:pointer; box-shadow:0 8px 30px rgba(0,0,0,0.5);">YOUR TOWER ATTACKS AUTOMATICALLY<br><span style="color:#facc15;">You have 35G. Tap DAMAGE or FIRE RATE below to upgrade!</span><br><span style="font-size:10px; color:#94a3b8; font-weight:600;">(tap to dismiss)</span></div>
+<div id="skill-info-modal" onclick="window.closeSkillInfo()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:60000; align-items:center; justify-content:center;">
+  <div onclick="event.stopPropagation()" style="background:#fff3d6; border:3px solid #5d3d1e; border-radius:16px; padding:16px 20px; width:240px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+    <div id="si-icon" style="font-size:30px; line-height:1.2;"></div>
+    <div id="si-name" style="font-weight:900; font-size:16px; color:#4a3520; margin-top:2px;"></div>
+    <div id="si-level" style="font-weight:900; font-size:11px; color:#a06e00; margin-top:2px;"></div>
+    <div id="si-desc" style="font-size:12.5px; color:#4a3520; margin-top:8px; line-height:1.5;"></div>
+    <div id="si-cd" style="font-size:11px; color:#8a6d4b; margin-top:6px;"></div>
+    <button id="si-action" style="display:none; margin-top:10px; background:linear-gradient(180deg,#79c14f,#58a83c); border:2.5px solid #3f7328; color:#ffffff; font-weight:900; font-size:13px; padding:9px 14px; border-radius:10px; cursor:pointer; width:100%;"></button>
+    <div style="margin-top:8px; font-size:10px; color:#8a6d4b;">tap outside to close</div>
+  </div>
+</div>
 </body></html>
