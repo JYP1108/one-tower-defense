@@ -1583,6 +1583,7 @@ var currentShopTab = 'turrets';
 
     window.gameStarted = true; gameStarted = true; window.battlePaused = false; battlePaused = false;
     if (window.__cgGameplayStart) window.__cgGameplayStart();
+    window.__cgReviveUsed = false; // revive ad: once per run
 
     // Reset clean stats for Wave 1
     fort.hp = fort.maxHp = 100;
@@ -2459,7 +2460,20 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
   // ===== CrazyGames SDK adapter: real SDK only, no fake ad UI =====
   window.__cgAdsAvailable = false;
   window.__cgAdPause = false;
+  window.__cgAdBusy = false;
   window.__cgReviveUsed = false;
+  window.cgShowAdBlocker = function(on) {
+    var el = document.getElementById('ad-blocker');
+    if (el) el.style.display = on ? 'flex' : 'none';
+  };
+  window.cgToast = function(msg, color) {
+    var el = document.getElementById('ad-toast');
+    if (!el) return;
+    el.innerText = msg;
+    el.style.background = color || '#22c55e';
+    el.style.display = 'block';
+    setTimeout(function() { el.style.display = 'none'; }, 2200);
+  };
   var CG_LEADERBOARD_KEY = ''; // TODO: 32-byte base64 key from CrazyGames dev portal (leaderboards are invite-only)
   function cgSetAdPause(on) {
     window.__cgAdPause = on;
@@ -2469,15 +2483,33 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
     } catch(e) {}
   }
   window.cgRequestRewarded = function(onFinished, onError) {
-    if (!window.__cgAdsAvailable) { if (onError) onError(); return false; }
+    if (!window.__cgAdsAvailable || window.__cgAdBusy) { if (onError) onError('unavailable'); return false; }
+    window.__cgAdBusy = true;
+    window.cgShowAdBlocker(true); // block ALL UI during request auction + ad, per CG ad requirements
+    var settled = false;
+    var done = function(ok, errCode) {
+      if (settled) return; // duplicate SDK callbacks can never grant twice
+      settled = true;
+      window.__cgAdBusy = false;
+      cgSetAdPause(false);
+      window.cgShowAdBlocker(false);
+      if (errCode === 'adsDisabled') {
+        // Session-scoped (Basic Launch / kids / offline): hide rewarded buttons for the session
+        window.__cgAdsAvailable = false;
+        var btns = document.querySelectorAll('.ad-btn');
+        for (var i = 0; i < btns.length; i++) btns[i].style.display = 'none';
+      }
+      if (ok) { if (onFinished) onFinished(); }
+      else { if (onError) onError(errCode); }
+    };
     try {
       window.CrazyGames.SDK.ad.requestAd('rewarded', {
         adStarted: function() { cgSetAdPause(true); },
-        adFinished: function() { cgSetAdPause(false); if (onFinished) onFinished(); },
-        adError: function() { cgSetAdPause(false); if (onError) onError(); }
+        adFinished: function() { done(true); },
+        adError: function(err) { done(false, (err && err.code) ? err.code : 'other'); }
       });
       return true;
-    } catch(e) { if (onError) onError(); return false; }
+    } catch(e) { done(false, 'exception'); return true; }
   };
   window.cgEncryptScore = async function(score) {
     var iv = window.crypto.getRandomValues(new Uint8Array(12));
@@ -2508,6 +2540,7 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
     window.cgRequestRewarded(function() {
       if (btn) btn.style.pointerEvents = '';
       window.proceedNextWave(true);
+      window.cgToast('2X REWARD APPLIED! \uD83C\uDF89');
     }, reenable);
   };
   window.reviveWithAd = function() {
@@ -2520,8 +2553,13 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
       fort.hp = Math.round(fort.maxHp * 0.6);
       if (fort.hp < 1) fort.hp = 1;
       battlePaused = false; window.battlePaused = false;
+      window.cgToast('REVIVED! 60% HP \uD83D\uDC96');
     }, function() {
-      if (btn) btn.style.pointerEvents = '';
+      if (btn) {
+        btn.style.pointerEvents = '';
+        btn.innerText = '\uD83D\uDCFA AD UNAVAILABLE';
+        setTimeout(function() { btn.innerText = '\uD83D\uDCFA REVIVE (60% HP)'; }, 1600);
+      }
     });
   };
   (function cgInit() {
@@ -2532,8 +2570,10 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
         try {
           var done = function() {
             try {
-              var env = (window.CrazyGames.SDK.getEnvironment) ? window.CrazyGames.SDK.getEnvironment() : 'unknown';
-              window.__cgAdsAvailable = (env === 'crazygames');
+              var env = window.CrazyGames.SDK.environment || ((window.CrazyGames.SDK.getEnvironment) ? window.CrazyGames.SDK.getEnvironment() : 'unknown');
+              window.__cgEnv = env;
+              // 'local' shows CG demo ads (official dev/test path); 'disabled' (e.g. GitHub Pages) hides ad buttons
+              window.__cgAdsAvailable = (env === 'crazygames' || env === 'local');
             } catch(e) { window.__cgAdsAvailable = false; }
           };
           if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.init) {
@@ -3299,6 +3339,7 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
   var keys = Object.keys(ICONS);
   var rx = new RegExp('(' + keys.map(function(k){ return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|') + ')(\uFE0F)?', 'g');
   function swapNode(node){
+    if (!node.parentNode) return; // node may already be detached by a previous swap
     var t = node.nodeValue;
     if (!rx.test(t)) { rx.lastIndex = 0; return; }
     rx.lastIndex = 0;
@@ -3416,4 +3457,6 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
     window.__pauseWired = true;
   })();
 </script>
+<div id="ad-blocker" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99999; align-items:center; justify-content:center; color:#ffffff; font-weight:800; font-size:18px; letter-spacing:1px;">AD LOADING&hellip;</div>
+<div id="ad-toast" style="display:none; position:fixed; top:16%; left:50%; transform:translateX(-50%); background:#22c55e; color:#ffffff; padding:12px 20px; border-radius:14px; z-index:100000; font-weight:800; font-size:16px; box-shadow:0 6px 24px rgba(0,0,0,0.35);"></div>
 </body></html>
