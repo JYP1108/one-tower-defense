@@ -1584,6 +1584,7 @@ var currentShopTab = 'turrets';
     window.gameStarted = true; gameStarted = true; window.battlePaused = false; battlePaused = false;
     if (window.__cgGameplayStart) window.__cgGameplayStart();
     window.__cgReviveUsed = false; // revive ad: once per run
+    window.__cgRunId = (window.__cgRunId || 0) + 1; // invalidate any ad reward still in flight from a previous run
 
     // Reset clean stats for Wave 1
     fort.hp = fort.maxHp = 100;
@@ -2461,6 +2462,7 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
   window.__cgAdsAvailable = false;
   window.__cgAdPause = false;
   window.__cgAdBusy = false;
+  window.__cgRunId = 0;
   window.__cgReviveUsed = false;
   window.cgShowAdBlocker = function(on) {
     var el = document.getElementById('ad-blocker');
@@ -2486,6 +2488,7 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
     if (!window.__cgAdsAvailable || window.__cgAdBusy) { if (onError) onError('unavailable'); return false; }
     window.__cgAdBusy = true;
     window.cgShowAdBlocker(true); // block ALL UI during request auction + ad, per CG ad requirements
+    var runAtRequest = window.__cgRunId || 0; // reward belongs to the run that requested it
     var settled = false;
     var done = function(ok, errCode) {
       if (settled) return; // duplicate SDK callbacks can never grant twice
@@ -2493,6 +2496,7 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
       window.__cgAdBusy = false;
       cgSetAdPause(false);
       window.cgShowAdBlocker(false);
+      if (ok && (window.__cgRunId || 0) !== runAtRequest) { ok = false; errCode = 'runChanged'; } // restarted mid-ad: never grant into the new run
       if (errCode === 'adsDisabled') {
         // Session-scoped (Basic Launch / kids / offline): hide rewarded buttons for the session
         window.__cgAdsAvailable = false;
@@ -2540,7 +2544,7 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
     window.cgRequestRewarded(function() {
       if (btn) btn.style.pointerEvents = '';
       window.proceedNextWave(true);
-      window.cgToast('2X REWARD APPLIED! \uD83C\uDF89');
+      window.cgToast('2X REWARD APPLIED!');
     }, reenable);
   };
   window.reviveWithAd = function() {
@@ -2553,7 +2557,7 @@ window.SPRITES["storm_orb"] = {w:20, h:20, ax:0.500, ay:0.500, fps:8, frames:["d
       fort.hp = Math.round(fort.maxHp * 0.6);
       if (fort.hp < 1) fort.hp = 1;
       battlePaused = false; window.battlePaused = false;
-      window.cgToast('REVIVED! 60% HP \uD83D\uDC96');
+      window.cgToast('REVIVED! 60% HP');
     }, function() {
       if (btn) {
         btn.style.pointerEvents = '';
