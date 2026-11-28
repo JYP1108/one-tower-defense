@@ -331,6 +331,7 @@ body { background: #33521f !important; font-family: "Trebuchet MS", "Segoe UI", 
 #main-lobby-screen > div:nth-child(6) { color: #fff3d6 !important; text-shadow: 0 1px 0 #5d3d1e !important; }
 #main-lobby-screen > div:last-child { color: #e8f5d0 !important; }
 #main-lobby-screen button { font-family: inherit !important; box-shadow: 0 4px 0 rgba(0,0,0,0.3) !important; }
+#main-lobby-screen button:active, .sub-btn:active, .shop-tab-btn:active, .shop-card-grid button:active { transform: translateY(2px); filter: brightness(0.93); }
 #arsenal-modal div[style*="rgb(15, 23, 42)"], #arsenal-modal div[style*="#0f172a"] { background: #fff3d6 !important; border-color: #5d3d1e !important; }
 #arsenal-modal [style*="color:#f8fafc"], #arsenal-modal [style*="color: #f8fafc"] { color: #4a3520 !important; }
 #arsenal-modal [style*="color:#94a3b8"], #arsenal-modal [style*="color: #94a3b8"] { color: #7a6a45 !important; }
@@ -655,6 +656,16 @@ body { background: #33521f !important; font-family: "Trebuchet MS", "Segoe UI", 
         </div>
       </div>
     </div>
+    </div>
+    <div class="set-card" id="set-quit-card" style="margin-top:10px; display:none;">
+      <button id="set-quit-btn" class="set-btn set-danger" onclick="window.askQuitFromSettings()">RETURN TO LOBBY</button>
+      <div id="set-quit-confirm" style="display:none;">
+        <div class="set-warn">Return to the lobby?<br>This run ends: wave, gold and upgrades are lost, and the next game starts from Wave 1. Diamonds, items and best record are kept.</div>
+        <div style="display:flex; gap:10px;">
+          <button id="set-quit-cancel" class="set-btn" style="flex:1;" onclick="window.cancelQuitFromSettings()">CANCEL</button>
+          <button id="set-quit-yes" class="set-btn set-danger" style="flex:1;" onclick="window.confirmQuitFromSettings()">RETURN</button>
+        </div>
+      </div>
     </div>
     <div style="flex:1;"></div>
     <button class="sub-btn" onclick="closeSettings()">BACK</button>
@@ -1044,6 +1055,7 @@ var currentShopTab = 'turrets';
       container.style.display = 'grid';
       container.style.gridTemplateColumns = '1fr 1fr';
       container.style.alignContent = 'start';
+      container.style.alignItems = 'stretch';
       container.style.gap = '7px';
     } else {
       container.style.gap = '10px';
@@ -1113,6 +1125,9 @@ var currentShopTab = 'turrets';
         card.className = 'shop-card-grid';
         card.style.borderLeft = '5px solid ' + __tc;
         card.style.padding = '8px 10px';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.height = '100%';
         card.innerHTML = `
           <div style="display:flex; align-items:center; gap:7px;">
             ${__iconSrc ? '<img src="' + __iconSrc + '" style="width:32px;height:32px;border-radius:8px;background:' + __tc + ';flex:none;" alt="">' : ''}
@@ -1122,7 +1137,7 @@ var currentShopTab = 'turrets';
             </div>
           </div>
           <div style="font-size:10.5px; color:#7a6a45; line-height:1.25; margin-top:4px; min-height:36px;">${item.desc || ''}</div>
-          <div style="display:flex; justify-content:flex-end; margin-top:2px;">${actionBtn}</div>
+          <div style="display:flex; justify-content:flex-end; margin-top:auto; padding-top:2px;">${actionBtn}</div>
         `;
       } else {
         card.innerHTML = `
@@ -1191,7 +1206,7 @@ var currentShopTab = 'turrets';
       sfx('laser');
       if (window.skills) {
         Object.keys(window.skills).forEach(k => { window.skills[k].lastUsed = 0; });
-        if (window.renderSkillButtons) window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
+        if (window.renderSkillButtons) window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots();
       }
       if (window.addFloatingText && window.fort) {
         window.addFloatingText(window.fort.x, window.fort.y - 45, 'OVERDRIVE: SKILLS READY!', '#38bdf8');
@@ -1282,10 +1297,11 @@ var currentShopTab = 'turrets';
 
   function initAudio() {
     try {
+      if (actx && actx.state === 'running' && bgmPlaying) return;
       if (!actx) { actx = new AudioCtx(); try { window.__otdMakeMasters(); } catch(e) {} }
       if (actx.state === 'suspended') actx.resume();
       document.getElementById('audio-prompt').style.display = 'none';
-      try { if (!bgmPlaying && window.startBGMAuto) window.startBGMAuto(); } catch(e) {}
+      try { if (!bgmPlaying && window.startBGMAuto) { setTimeout(function(){ try { window.startBGMAuto(); } catch(e) {} }, 0); } } catch(e) {}
     } catch(e) {}
   }
 
@@ -1461,6 +1477,10 @@ var currentShopTab = 'turrets';
     document.getElementById('set-reset-card').style.display = window.gameStarted ? 'none' : 'block';
     document.getElementById('set-reset-confirm').style.display = 'none';
     document.getElementById('set-reset-btn').style.display = 'block';
+    var sqc = document.getElementById('set-quit-card');
+    if (sqc) sqc.style.display = window.gameStarted ? 'block' : 'none';
+    var sqb = document.getElementById('set-quit-btn'); if (sqb) sqb.style.display = 'block';
+    var sqx = document.getElementById('set-quit-confirm'); if (sqx) sqx.style.display = 'none';
     document.getElementById('settings-screen').style.display = 'flex';
     if (window.__tutSync) window.__tutSync();
   };
@@ -1504,6 +1524,16 @@ var currentShopTab = 'turrets';
     try { if (window.__cgGameplayStop) window.__cgGameplayStop(); } catch(e) {}
     window.location.reload();
   };
+  window.askQuitFromSettings = function() {
+    document.getElementById('set-quit-btn').style.display = 'none';
+    document.getElementById('set-quit-confirm').style.display = 'block';
+  };
+  window.cancelQuitFromSettings = function() {
+    document.getElementById('set-quit-confirm').style.display = 'none';
+    document.getElementById('set-quit-btn').style.display = 'block';
+  };
+  // Same teardown as the pause menu's QUIT GAME: ends only this run (save data untouched) and reloads to a clean lobby.
+  window.confirmQuitFromSettings = function() { window.confirmQuitRun(); };
   window.askResetProgress = function() {
     document.getElementById('set-reset-btn').style.display = 'none';
     document.getElementById('set-reset-confirm').style.display = 'block';
@@ -1552,6 +1582,8 @@ var currentShopTab = 'turrets';
     try {
       var tr = BGM_T[bgmTrack]; if (!tr) return;
       var spb = 30 / tr.bpm; // 8th-note seconds
+      // After a background stall the clock jumped ahead: snap the schedule forward instead of bursting queued notes.
+      if (bgmNextT < actx.currentTime - 0.25) { bgmNextT = actx.currentTime + 0.05; }
       while (bgmNextT < actx.currentTime + 0.18) {
         var mi = bgmStepI % 16;
         var m = tr.mel[mi], b = tr.bass[mi];
@@ -1567,7 +1599,8 @@ var currentShopTab = 'turrets';
       var gov = document.getElementById('gameover-popup');
       if (gov && gov.style.display === 'flex') return 'lobby';
       if (typeof activeBoss !== 'undefined' && activeBoss && activeBoss.hp > 0 && enemies.indexOf(activeBoss) >= 0) return 'boss';
-      return ['forest','tundra','desert','space'][regionForWave(window.__getWave ? window.__getWave() : 1)] || 'forest';
+      var wNow = (typeof wave !== 'undefined' && wave >= 1) ? wave : 1;
+      return ['forest','tundra','desert','space'][regionForWave(wNow)] || 'forest';
     } catch(e) { return null; }
   }
   function bgmWatch() {
@@ -1990,7 +2023,7 @@ var currentShopTab = 'turrets';
 
     updateStatUI();
     initWave(1);
-    if (window.renderSkillButtons) window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
+    if (window.renderSkillButtons) window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots();
   };
 
   window.startBattleFromLobby = function() {
@@ -3386,13 +3419,13 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
 
     // skin base platform under the tower
     var __skinKey = String(window.equippedSkin || 'skin_cyber_blue').replace('skin_', '');
-    if (window.SPRITES['base_' + __skinKey]) { drawSpr('base_' + __skinKey, 0, x, y + 10, 1.45, 0, false); }
+    if (window.SPRITES && window.SPRITES['base_' + __skinKey]) { drawSpr('base_' + __skinKey, 0, x, y + 10, 1.45, 0, false); }
     // stone platform base (flag waves via frames)
-    drawSpr((regionForWave(wave) === 3 && window.SPRITES['fort_space']) ? 'fort_space' : 'fort_base', Math.floor(nowMs / 330) % 3, x, y, 0.80, 0, false);
+    drawSpr((window.SPRITES && regionForWave(wave) === 3 && window.SPRITES['fort_space']) ? 'fort_space' : 'fort_base', Math.floor(nowMs / 330) % 3, x, y, 0.80, 0, false);
 
     // barrel assembly
     var bkind = (selectedTowerClass === 'shotgun' || selectedTowerClass === 'missile' || selectedTowerClass === 'tesla' || selectedTowerClass === 'cryo') ? selectedTowerClass : 'railgun';
-    var bsp = window.SPRITES['barrel_' + bkind];
+    var bsp = window.SPRITES ? window.SPRITES['barrel_' + bkind] : null;
     if (bsp && bsp.frames[0] && bsp.frames[0].complete && bsp.frames[0].naturalWidth) {
       cx.save();
       cx.translate(x, y);
@@ -3402,7 +3435,7 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
       cx.drawImage(bsp.frames[0], 2 - recoil - bw * bsp.ax, -bh * bsp.ay, bw, bh);
       // muzzle flash right after firing
       if (simNowMs - fort.lastShot < 90) {
-        var msp = window.SPRITES['muzzle'];
+        var msp = window.SPRITES ? window.SPRITES['muzzle'] : null;
         if (msp && msp.frames[0].complete && msp.frames[0].naturalWidth) {
           var mx = 2 - recoil - bw * bsp.ax + bw * 0.92;
           cx.drawImage(msp.frames[0], mx, -15, 30, 30);
@@ -3439,8 +3472,8 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
   }
 
   function drawMonster(m) {
-    var spName = (m.type === 'boss') ? (m.bossSprite || 'boss') : (window.SPRITES[m.type] ? m.type : 'crawler');
-    var sp = window.SPRITES[spName];
+    var spName = (m.type === 'boss') ? (m.bossSprite || 'boss') : ((window.SPRITES && window.SPRITES[m.type]) ? m.type : 'crawler');
+    var sp = window.SPRITES ? window.SPRITES[spName] : null;
     var facing = Math.atan2(fort.y - m.y, fort.x - m.x);
 
     // ground shadow (unrotated)
@@ -3682,7 +3715,7 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
 
       var maxTxt = s.level >= effMax ? ' [MAX]' : '';
       if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, `${s.name} Lv.${s.level}${maxTxt}! (CD ${s.cd}s)`, s.level >= 5 ? '#facc15' : '#38bdf8');
-      window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
+      window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots();
     } else {
       if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, 'NOT ENOUGH GOLD!', '#ef4444');
     }
@@ -3698,7 +3731,7 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
         if (window.sfx) window.sfx('coin');
         s.upCost = s.upCost || Math.round(s.cost * 1.25);
         if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, `${s.name} Lv.1 UNLOCKED!`, '#38bdf8');
-        window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
+        window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots();
       } else {
         if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 30, 'NOT ENOUGH GOLD!', '#ef4444');
       }
@@ -3744,7 +3777,7 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
       window.fortOverchargeUntil = now + ocTime;
       if (window.addFloatingText) window.addFloatingText(window.fort.x, window.fort.y - 40, `OVERCHARGED (${(ocTime/1000).toFixed(1)}s)!`, '#eab308');
     }
-    window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
+    window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots();
   };
 
   window.toggleSpeed = function() {
@@ -3784,8 +3817,10 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
       var statusText = '';
       var cdOverlayStyle = '';
 
+      var priceHtml = '';
       if (!s.unlocked) {
-        statusText = `<div class="skill-st-lock" style="font-size:8.5px; font-weight:800; margin-top:2px;">UNLOCK ${s.cost}G</div>`;
+        var lockAfford = (window.gold || 0) >= s.cost;
+        priceHtml = `<div class="skill-st-lock" style="font-size:8.5px; font-weight:800;${lockAfford ? '' : ' color:#f87171 !important;'}">UNLOCK ${s.cost}G</div>`;
       } else {
         var now = (window.__simTimeMs || 0);
         var elapsed = now - s.lastUsed;
@@ -3800,11 +3835,11 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
         }
       }
 
-      var upBtnHtml = '';
       if (s.unlocked && !isMax) {
-        upBtnHtml = `<div onclick="window.upgradeSkill('${t}', event)" style="margin-top:3px; background:rgba(250,204,21,0.18); border:1px solid #facc15; color:#facc15; font-size:8px; font-weight:900; border-radius:4px; padding:2px 2px; cursor:pointer;">▲Lv.${s.level+1} ${s.upCost}G</div>`;
+        var upAfford = (window.gold || 0) >= s.upCost;
+        priceHtml = `<div onclick="window.upgradeSkill('${t}', event)" style="background:rgba(250,204,21,0.18); border:1px solid ${upAfford ? '#facc15' : '#f87171'}; color:${upAfford ? '#facc15' : '#f87171'} !important; font-size:8px; font-weight:900; border-radius:4px; padding:2px 2px; cursor:pointer;">▲Lv.${s.level+1} ${s.upCost}G</div>`;
       } else if (s.unlocked && isMax) {
-        upBtnHtml = `<div style="margin-top:3px; font-size:8px; font-weight:900; color:#f59e0b; background:rgba(245,158,11,0.18); border:1px solid #f59e0b; border-radius:4px; padding:2px 2px;">👑 MAX</div>`;
+        priceHtml = `<div style="font-size:8px; font-weight:900; color:#f59e0b; background:rgba(245,158,11,0.18); border:1px solid #f59e0b; border-radius:4px; padding:2px 2px;">👑 MAX</div>`;
       }
 
       card.style.position = 'relative';
@@ -3812,8 +3847,12 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
 
       card.innerHTML = `
         <div style="position:absolute; inset:0; ${cdOverlayStyle} pointer-events:none; border-radius:8px;"></div>
-        <div style="font-size:20px; position:relative; z-index:2; line-height:1.15;">${s.icon}</div>
-        <div style="font-weight:900; font-size:9px; margin-top:1px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; position:relative; z-index:2; line-height:1.2; text-align:center; max-width:100%; overflow:hidden;">${s.name.replace('OVERCHARGE','OVER CHARGE').replace(' ', '<span style="flex-basis:100%;height:0;"></span>')} ${lvlBadge}</div>
+        <div style="position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; height:100%;">
+          <div style="font-size:20px; line-height:1.15;">${s.icon}</div>
+          <div style="font-weight:900; font-size:9px; margin-top:1px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; line-height:1.2; text-align:center; max-width:100%; overflow:hidden; min-height:22px;">${s.name.replace('OVERCHARGE','OVER CHARGE').replace(' ', '<span style="flex-basis:100%;height:0;"></span>')} ${lvlBadge}</div>
+          <div class="skill-status-slot" style="min-height:13px; display:flex; align-items:center; justify-content:center; margin-top:2px;">${statusText}</div>
+          <div class="skill-price-slot" style="margin-top:auto; min-height:14px; display:flex; align-items:center; justify-content:center;">${priceHtml}</div>
+        </div>
         <div onclick="window.openSkillInfo('${t}', event)" style="position:absolute; top:2px; right:2px; z-index:3; width:16px; height:16px; border-radius:50%; background:rgba(226,232,240,0.85); color:#0f172a; font-size:10px; font-weight:900; line-height:16px; text-align:center; cursor:pointer;">i</div>
       `;
     });
@@ -3860,7 +3899,7 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
   // Initialize
   window.addEventListener('DOMContentLoaded', function() {
     if (window.updateChipDisplays) window.updateChipDisplays();
-    if (window.renderSkillButtons) window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots(); window.renderItemQuickslots();
+    if (window.renderSkillButtons) window.renderSkillButtons(); if (window.renderItemQuickslots) window.renderItemQuickslots();
   });
 })();
 </script>
@@ -3989,7 +4028,20 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
     window.__checkAutoPause = function() {
       if (document.hidden && window.gameStarted) window.pauseGame('auto');
     };
+    // Wake audio after returning from background: mobile browsers suspend the AudioContext
+    // while hidden. resume() can require a user gesture on some mobile browsers; if it is
+    // rejected here the next tap (initAudio) completes the resume. Mute/volume prefs are
+    // gain-based and untouched by this.
+    window.__audioWake = function() {
+      try {
+        if (document.hidden) return;
+        if (actx && actx.state !== 'running') actx.resume();
+        if (actx && bgmPlaying && bgmNextT < actx.currentTime) bgmNextT = actx.currentTime + 0.05;
+      } catch(e) {}
+    };
     document.addEventListener('visibilitychange', window.__checkAutoPause);
+    document.addEventListener('visibilitychange', window.__audioWake);
+    window.addEventListener('pageshow', window.__audioWake);
     window.addEventListener('pagehide', function() { if (window.gameStarted) window.pauseGame('auto'); });
     var bp = document.getElementById('btn-pause');
     if (bp) bp.addEventListener('click', function(ev) {
