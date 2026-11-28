@@ -1736,7 +1736,7 @@ var currentShopTab = 'turrets';
   try {
     // One-time Time Warp Field refund (160 diamonds). Idempotent across interrupted writes:
     // the marker stores the absolute target total, so repeating a step never adds twice.
-    if (localStorage.getItem('otd_owned_timewarp') === 'true') {
+    if (window.__otdTwRefundEnabled === true && localStorage.getItem('otd_owned_timewarp') === 'true') { // refund disabled pending user approval; purchase flag preserved
       var __rt = parseInt(localStorage.getItem('otd_tw_refund_to') || '', 10);
       if (!(__rt >= 0)) {
         __rt = chips + 160;
