@@ -643,6 +643,7 @@ body { background: #33521f !important; font-family: "Trebuchet MS", "Segoe UI", 
     <div class="set-card">
       <div class="set-row"><span class="set-name">Reduce flashes</span><button id="set-calm-btn" class="set-toggle" onclick="window.setCalm(!window.__otdCalm)">OFF</button></div>
       <div class="set-row" style="margin-top:10px;"><span class="set-name">Screen shake</span><button id="set-shake-btn" class="set-toggle on" onclick="window.setShake(!window.__otdShakeOn)">ON</button></div>
+      <div class="set-row" style="margin-top:10px;"><span class="set-name">Haptics</span><button id="set-haptic-btn" class="set-toggle on" onclick="window.setHaptic(!window.__otdHapticOn)">ON</button></div>
     </div>
     <div id="set-lobby-only">
     <button class="set-btn" onclick="window.openLeaderboard()">HALL OF FAME</button>
@@ -1462,6 +1463,22 @@ var currentShopTab = 'turrets';
     try { localStorage.setItem('otd_fx_shake', on ? '1' : '0'); } catch(e) {}
     var b = document.getElementById('set-shake-btn'); if (b) { b.textContent = on ? 'ON' : 'OFF'; b.className = 'set-toggle' + (on ? ' on' : ''); }
   };
+  window.__otdHapticOn = (localStorage.getItem('otd_haptic') !== '0');
+  window.setHaptic = function(on) {
+    window.__otdHapticOn = !!on;
+    try { localStorage.setItem('otd_haptic', on ? '1' : '0'); } catch(e) {}
+    var b = document.getElementById('set-haptic-btn'); if (b) { b.textContent = on ? 'ON' : 'OFF'; b.className = 'set-toggle' + (on ? ' on' : ''); }
+  };
+  var __hapticPatterns = { forthit: [70] };
+  var __hapticGap = { forthit: 200 };
+  window.__hapticT = {};
+  window.__haptic = function(kind) {
+    if (!window.__otdHapticOn || typeof navigator === 'undefined' || !navigator.vibrate) return false;
+    var now = Date.now();
+    if (now - (window.__hapticT[kind] || 0) < (__hapticGap[kind] || 0)) return false;
+    window.__hapticT[kind] = now;
+    try { return !!navigator.vibrate(__hapticPatterns[kind] || [20]); } catch(e) { return false; }
+  };
   window.openSettings = function(e) {
     if (e) e.stopPropagation();
     // Settings is a menu: in a run it must keep the sim frozen (battlePaused) even if opened without the pause popup.
@@ -1471,7 +1488,7 @@ var currentShopTab = 'turrets';
     m.value = mv; f.value = fv;
     document.getElementById('set-music-val').textContent = mv + '%';
     document.getElementById('set-sfx-val').textContent = fv + '%';
-    window.setShake(window.__otdShakeOn); window.setMute(window.__otdMuted); window.setCalm(window.__otdCalm);
+    window.setShake(window.__otdShakeOn); window.setMute(window.__otdMuted); window.setCalm(window.__otdCalm); window.setHaptic(window.__otdHapticOn);
     document.getElementById('set-lobby-only').style.display = 'block';
     // In a run the progress reset is not offered (user request); Hall of Fame stays.
     document.getElementById('set-reset-card').style.display = window.gameStarted ? 'none' : 'block';
@@ -2608,7 +2625,7 @@ var currentShopTab = 'turrets';
 
       if (Math.hypot(eb.x - fort.x, eb.y - fort.y) < fort.radius) {
         if (fort.shieldTime <= 0) {
-          fort.hp -= eb.damage;
+          fort.hp -= eb.damage; if (window.__haptic) window.__haptic('forthit');
           if (fort.adrenaline > 0) { fort.adrenalineUntil = (window.__simTimeMs || 0) + 4000; }
           screenShake = 3;
           addFloatingText(fort.x, fort.y - 25, `-${eb.damage}`, '#a3e635');
@@ -2683,7 +2700,7 @@ var currentShopTab = 'turrets';
           if (e.slamPending && __dbf < fort.radius + e.radius + 26) {
             e.slamPending = false; e.slamUntil = 0; e.slamBoost = 0;
             if (fort.shieldTime <= 0) {
-              fort.hp -= 18; screenShake = Math.max(screenShake, 8);
+              fort.hp -= 18; screenShake = Math.max(screenShake, 8); if (window.__haptic) window.__haptic('forthit');
               addFloatingText(fort.x, fort.y - 30, '-18', '#f43f5e'); sfx('hit');
               if (fort.hp <= 0) { fort.hp = 0; triggerGameOver(); return; }
             } else { addFloatingText(fort.x, fort.y - 25, 'PARRIED!', '#10b981'); }
@@ -2784,7 +2801,7 @@ var currentShopTab = 'turrets';
           e.lastAttackTime = time;
           e.attachHitN = (e.attachHitN || 0) + 1;
           if (fort.shieldTime <= 0) {
-            fort.hp -= atkDmg;
+            fort.hp -= atkDmg; if (window.__haptic) window.__haptic('forthit');
             if (fort.thorns > 0) { e.hp -= fort.thorns; e.hitFlash = 3; }
             if (fort.adrenaline > 0) { fort.adrenalineUntil = (window.__simTimeMs || 0) + 4000; }
             screenShake = Math.max(screenShake, 2);
@@ -4089,3 +4106,4 @@ try{document.getElementById('lobby-bg').style.backgroundImage='url('+window.STAR
 })();
 </script>
 </body></html>
+
