@@ -1285,6 +1285,7 @@ var currentShopTab = 'turrets';
       if (!actx) { actx = new AudioCtx(); try { window.__otdMakeMasters(); } catch(e) {} }
       if (actx.state === 'suspended') actx.resume();
       document.getElementById('audio-prompt').style.display = 'none';
+      try { if (!bgmPlaying && window.startBGMAuto) window.startBGMAuto(); } catch(e) {}
     } catch(e) {}
   }
 
@@ -1525,38 +1526,72 @@ var currentShopTab = 'turrets';
     window.location.reload();
   };
 
-  // BGM
-  var bgmNotes = [65.41, 65.41, 77.78, 65.41, 87.31, 65.41, 98.00, 87.31];
-  var bgmNotesBoss = [61.74, 61.74, 73.42, 61.74, 92.50, 82.41, 73.42, 61.74];
-  var bgmStep = 0;
+  // BGM (r34): melodic per-context tracks — lobby, biome (forest/tundra/desert/space), boss.
+  // Two voices (melody + bass) scheduled with lookahead; watchdog switches track on region/boss/lobby transitions.
+  var BGM_T = {
+    lobby:  { bpm: 84,  mel: [67,0,71,0,74,0,71,0, 69,0,74,0,76,74,71,0], bass: [55,0,0,0,62,0,0,0, 57,0,0,0,62,0,0,0], mw:'sine',     bw:'sine',     mg:0.10, bg:0.07 },
+    forest: { bpm: 120, mel: [72,76,79,81,79,76,74,72, 74,76,79,76,74,72,69,0], bass: [48,0,55,0,57,0,55,0, 53,0,57,0,55,0,52,0], mw:'triangle', bw:'sine',     mg:0.11, bg:0.08 },
+    tundra: { bpm: 96,  mel: [69,0,72,0,76,0,74,72, 69,0,64,0,67,0,69,0], bass: [45,0,0,0,52,0,0,0, 41,0,0,0,52,0,0,0], mw:'sine',     bw:'sine',     mg:0.10, bg:0.07 },
+    desert: { bpm: 108, mel: [64,65,67,65,64,59,60,59, 64,65,67,71,67,65,64,0], bass: [40,0,47,0,40,0,47,0, 45,0,40,0,47,0,40,0], mw:'triangle', bw:'sawtooth', mg:0.10, bg:0.045 },
+    space:  { bpm: 72,  mel: [74,0,0,76,0,0,81,0, 77,0,0,74,0,76,0,0], bass: [50,0,0,0,0,0,0,0, 45,0,0,0,0,0,0,0], mw:'sine',     bw:'sine',     mg:0.09, bg:0.08 },
+    boss:   { bpm: 140, mel: [62,62,65,62,67,65,64,62, 62,62,65,62,70,67,65,64], bass: [38,38,0,38,0,38,38,0, 41,41,0,41,0,41,43,0], mw:'sawtooth', bw:'sawtooth', mg:0.075, bg:0.06 }
+  };
+  var bgmTrack = null, bgmNextT = 0, bgmStepI = 0;
+  function midiHz(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+  function bgmVoice(t, hz, type, peak, dur) {
+    var osc = actx.createOscillator(), g = actx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(hz, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    osc.connect(g); g.connect(window.__otdBgmOut ? window.__otdBgmOut() : actx.destination);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+  function bgmScheduler() {
+    if (!bgmPlaying || !actx || actx.state !== 'running') return;
+    try {
+      var tr = BGM_T[bgmTrack]; if (!tr) return;
+      var spb = 30 / tr.bpm; // 8th-note seconds
+      while (bgmNextT < actx.currentTime + 0.18) {
+        var mi = bgmStepI % 16;
+        var m = tr.mel[mi], b = tr.bass[mi];
+        if (m) bgmVoice(bgmNextT, midiHz(m), tr.mw, tr.mg, spb * 1.8);
+        if (b) bgmVoice(bgmNextT, midiHz(b), tr.bw, tr.bg, spb * 3.5);
+        bgmStepI++; bgmNextT += spb;
+      }
+    } catch(e) {}
+  }
+  function bgmDesired() {
+    try {
+      if (!window.gameStarted) return 'lobby';
+      var gov = document.getElementById('gameover-popup');
+      if (gov && gov.style.display === 'flex') return 'lobby';
+      if (typeof activeBoss !== 'undefined' && activeBoss && activeBoss.hp > 0 && enemies.indexOf(activeBoss) >= 0) return 'boss';
+      return ['forest','tundra','desert','space'][regionForWave(window.__getWave ? window.__getWave() : 1)] || 'forest';
+    } catch(e) { return null; }
+  }
+  function bgmWatch() {
+    if (!bgmPlaying) return;
+    var want = bgmDesired();
+    if (want && want !== bgmTrack) {
+      bgmTrack = want; bgmStepI = 0;
+      if (actx) bgmNextT = actx.currentTime + 0.06;
+    }
+  }
   function startBGM() {
     if (bgmPlaying) return;
     initAudio();
+    if (!actx) return;
     bgmPlaying = true;
-
-    bgmTimer = setInterval(function() {
-      if (!actx || !bgmPlaying) return;
-      try {
-        var now = actx.currentTime;
-        var osc = actx.createOscillator();
-        var gain = actx.createGain();
-        var __bossOn = (typeof activeBoss !== 'undefined') && activeBoss && activeBoss.hp > 0 && enemies.indexOf(activeBoss) >= 0;
-        var __notes = __bossOn ? bgmNotesBoss : bgmNotes;
-        osc.type = __bossOn ? 'sawtooth' : 'triangle';
-        osc.frequency.setValueAtTime(__notes[bgmStep % __notes.length], now);
-        gain.gain.setValueAtTime(__bossOn ? 0.09 : 0.07, now);
-        gain.gain.linearRampToValueAtTime(0.005, now + 0.2);
-        osc.connect(gain); gain.connect(window.__otdBgmOut ? window.__otdBgmOut() : actx.destination);
-        osc.start(now); osc.stop(now + 0.22);
-        bgmStep++;
-      } catch(e) {}
-    }, 240 / gameSpeed);
+    bgmTrack = null; bgmStepI = 0;
+    bgmWatch();
+    bgmTimer = setInterval(function() { bgmWatch(); bgmScheduler(); }, 60);
   }
 
   function stopBGM() {
     bgmPlaying = false;
     if (bgmTimer) clearInterval(bgmTimer);
-
+    bgmTimer = null; bgmTrack = null;
   }
 
   window.toggleBGM = function(e) {
@@ -1564,6 +1599,31 @@ var currentShopTab = 'turrets';
     if (bgmPlaying) stopBGM();
     else startBGM();
   };
+  window.startBGMAuto = function() { try { startBGM(); } catch(e) {} };
+
+  window.startBGM = startBGM; window.stopBGM = stopBGM;
+  window.__bgmDebug = function() {
+    return { playing: bgmPlaying, track: bgmTrack, step: bgmStepI,
+             actx: actx ? actx.state : null, desired: bgmDesired(),
+             gain: (window.__otdBgmOut ? window.__otdBgmOut().gain.value : null) };
+  };
+  window.__bgmRms = function(ms) {
+    return new Promise(function(res) {
+      try {
+        var an = actx.createAnalyser(); an.fftSize = 2048;
+        var out = window.__otdBgmOut(); out.connect(an);
+        var buf = new Float32Array(an.fftSize); var peak = 0, sum = 0, n = 0;
+        var t0 = Date.now();
+        (function pump() {
+          an.getFloatTimeDomainData(buf);
+          for (var i = 0; i < buf.length; i++) { var v = Math.abs(buf[i]); if (v > peak) peak = v; sum += v * v; n++; }
+          if (Date.now() - t0 < ms) setTimeout(pump, 100);
+          else { try { out.disconnect(an); } catch(e) {} res({ peak: +peak.toFixed(4), rms: +Math.sqrt(sum / n).toFixed(5), state: actx.state, track: bgmTrack }); }
+        })();
+      } catch(e) { res({ error: String(e) }); }
+    });
+  };
+
 
   // Game Engine Data
   var gameSpeed = 1.0;
@@ -1885,12 +1945,6 @@ var currentShopTab = 'turrets';
     if (window.__cgGameplayStart) window.__cgGameplayStart();
     window.__cgReviveUsed = false; // revive ad: once per run
     window.__cgRunId = (window.__cgRunId || 0) + 1; // invalidate any ad reward still in flight from a previous run
-    try {
-      if (!localStorage.getItem('otd_tut_v1')) {
-        localStorage.setItem('otd_tut_v1', '1');
-        setTimeout(function() { if (window.showWave1Tutorial) window.showWave1Tutorial(); }, 2500);
-      }
-    } catch(e) {}
 
     // Reset clean stats for Wave 1
     fort.hp = fort.maxHp = 100;
